@@ -327,10 +327,13 @@ function renderLaie(payload) {
       ? `<div class="lc-foot">${ownerAv ? ownerAv : '$' + sp.price}</div>`
       : (sp.note ? `<div class="lc-foot lc-note">${escapeHtml(sp.note)}</div>` : '');
     const toks = (tokensOn[i] || []).map((a) => `<span>${a}</span>`).join('');
+    // Property cells show no icon (it was confusing next to player tokens);
+    // special spaces (corners, chance) keep their icon to stand out.
+    const emojiHtml = sp.type === 'prop' ? '' : `<div class="lc-emoji">${sp.emoji}</div>`;
     cells += `<div class="lc ${sp.type}" style="grid-row:${r};grid-column:${c}">
       ${band}
-      <div class="lc-emoji">${sp.emoji}</div>
-      <div class="lc-name">${escapeHtml(sp.name)}</div>
+      ${emojiHtml}
+      <div class="lc-name${sp.type === 'prop' ? ' prop-name' : ''}">${escapeHtml(sp.name)}</div>
       ${foot}
       <div class="lc-toks">${toks}</div>
     </div>`;

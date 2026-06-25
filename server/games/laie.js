@@ -231,7 +231,8 @@ function renderControllers(ctx) {
   const curId = currentCid(ctx);
   ctx.renderControllers((p) => {
     const cash = s.cash[p.id] || 0;
-    const myProps = Object.entries(s.owners).filter(([, o]) => o === p.id).map(([i]) => BOARD[i].emoji).join(' ');
+    const myPropNames = Object.entries(s.owners).filter(([, o]) => o === p.id).map(([i]) => BOARD[i].name);
+    const myCount = myPropNames.length;
 
     if (s.phase === 'over') {
       const won = s.winner === p.id;
@@ -256,7 +257,7 @@ function renderControllers(ctx) {
       }
       return {
         title: '🎲 Your turn!',
-        subtitle: `You have $${cash}${myProps ? ' · ' + myProps : ''}`,
+        subtitle: `You have $${cash}${myCount ? ` · ${myCount} ${myCount === 1 ? 'place' : 'places'}` : ''}`,
         controls: [{ type: 'button', id: 'roll', label: '🎲 Roll the dice', big: true, color: '#ff6b6b' }],
       };
     }
@@ -264,7 +265,7 @@ function renderControllers(ctx) {
     return {
       title: `${name(ctx, curId)}'s turn`,
       subtitle: `You have $${cash}`,
-      controls: [{ type: 'text', value: myProps ? `You own: ${myProps}` : 'No properties yet — keep rolling!' }],
+      controls: [{ type: 'text', value: myCount ? `You own: ${myPropNames.join(', ')}` : 'No properties yet — keep rolling!' }],
     };
   });
 }
