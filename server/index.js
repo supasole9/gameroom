@@ -7,15 +7,14 @@ import { Server } from 'socket.io';
 import QRCode from 'qrcode';
 
 import {
-  createRoom, getRoom, deleteRoom, upsertPlayer, removePlayer, getPlayer,
-  getPlayerBySocket, publicPlayers, findRoomBySocket, connectedCount,
+  createRoom, getRoom, deleteRoom, syncPhoneSeats, removePlayer, getPlayer,
+  getPlayersBySocket, publicPlayers, findRoomBySocket, connectedCount, MAX_PLAYERS,
 } from './rooms.js';
 import { createContext } from './context.js';
 import { catalogue, getGame } from './games/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 5858;
-const MAX_PLAYERS = 6;
 
 const app = express();
 const httpServer = createServer(app);
@@ -50,13 +49,18 @@ function sendLobby(room) {
   });
 }
 
-function controllerLobby(room, player) {
-  io.to(player.socketId).emit('controller:lobby', {
-    code: room.code,
-    you: { name: player.name, avatar: player.avatar },
-    phase: room.phase,
-    gameName: room.game ? room.game.name : null,
-  });
+// Notify each distinct phone (socket) once about the lobby/game phase.
+function controllerLobbyAll(room) {
+  const seen = new Set();
+  for (const p of room.players.values()) {
+    if (seen.has(p.socketId)) continue;
+    seen.add(p.socketId);
+    io.to(p.socketId).emit('controller:lobby', {
+      code: room.code,
+      phase: room.phase,
+      gameName: room.game ? room.game.name : null,
+    });
+  }
 }
 
 io.on('connection', (socket) => {
@@ -85,7 +89,7 @@ io.on('connection', (socket) => {
     room.state = null;
     const ctx = createContext(io, room);
     game.init(ctx);
-    for (const p of room.players.values()) controllerLobby(room, p);
+    controllerLobbyAll(room);
   });
 
   // Return to the arcade menu (end current game).
@@ -97,22 +101,24 @@ io.on('connection', (socket) => {
     room.game = null;
     room.state = null;
     sendLobby(room);
-    for (const p of room.players.values()) controllerLobby(room, p);
+    controllerLobbyAll(room);
   });
 
-  // Host removes a player (e.g. a kid who wandered off and left a stale slot).
-  socket.on('host:removePlayer', ({ clientId }) => {
+  // Host removes a player seat (e.g. a stale slot left behind).
+  socket.on('host:removePlayer', ({ clientId, pid }) => {
     const room = findRoomBySocket(socket.id);
     if (!room || room.hostSocketId !== socket.id) return;
-    const p = getPlayer(room, clientId);
+    const id = pid || clientId; // backward compatible
+    const p = getPlayer(room, id);
     if (!p) return;
-    io.to(p.socketId).emit('controller:error', { text: 'You were removed from the game.' });
-    removePlayer(room, clientId);
+    io.to(p.socketId).emit('controller:removed', { pid: id });
+    removePlayer(room, id);
     sendLobby(room);
   });
 
   // ---- Phone / controller ----
-  socket.on('player:join', ({ code, name, clientId }) => {
+  // A phone joins with one or more seats: { code, clientId, seats:[{pid,name}] }.
+  socket.on('player:join', ({ code, clientId, seats, name }) => {
     const room = getRoom(code);
     if (!room) {
       socket.emit('controller:error', { text: "Hmm, that room code wasn't found. Check the TV!" });
@@ -122,38 +128,56 @@ io.on('connection', (socket) => {
       socket.emit('controller:error', { text: 'Could not start your controller — try reloading.' });
       return;
     }
-    if (!room.players.has(clientId) && room.players.size >= MAX_PLAYERS) {
-      socket.emit('controller:error', { text: `This room is full (${MAX_PLAYERS} players max).` });
+    // Normalise to a seat list (supports legacy single-name join).
+    let seatList = Array.isArray(seats) ? seats.filter((s) => s && s.pid) : [];
+    if (!seatList.length && name) seatList = [{ pid: clientId, name }];
+    if (!seatList.length) {
+      socket.emit('controller:error', { text: 'Add at least one player name.' });
       return;
     }
 
-    const { player, reconnected } = upsertPlayer(room, clientId, socket.id, name);
-    socket.emit('controller:joined', { code: room.code, name: player.name, avatar: player.avatar });
-    sendLobby(room);
-    controllerLobby(room, player);
+    const wasReconnect = seatList.some((s) => room.players.has(s.pid));
+    const allowStructureChange = room.phase === 'lobby';
+    const { accepted, rejected } = syncPhoneSeats(room, clientId, socket.id, seatList, allowStructureChange);
+    if (!accepted.length) {
+      socket.emit('controller:error', { text: `This room is full (${MAX_PLAYERS} players max).` });
+      return;
+    }
+    if (rejected) io.to(socket.id).emit('controller:toast', { text: `Room is full — only ${accepted.length} of your players joined.` });
 
-    // If a game is running, restore this phone's view (and refresh others so the
-    // scoreboard / turn indicator show them as back online).
+    socket.emit('controller:joined', {
+      code: room.code,
+      seats: accepted.map((p) => ({ pid: p.id, name: p.name, avatar: p.avatar })),
+    });
+    sendLobby(room);
+    io.to(socket.id).emit('controller:lobby', {
+      code: room.code, phase: room.phase, gameName: room.game ? room.game.name : null,
+    });
+
+    // If a game is running, restore views for this phone's seats.
     if (room.phase === 'game' && room.game) {
       const ctx = createContext(io, room);
       if (typeof room.game.sync === 'function') {
         room.game.sync(ctx);
       } else {
-        io.to(player.socketId).emit('controller:view', {
-          title: `${room.game.emoji} ${room.game.name}`,
-          subtitle: "Game in progress — you'll join the next round!",
-          controls: [],
-        });
+        for (const p of accepted) {
+          io.to(p.socketId).emit('controller:view', {
+            seat: { pid: p.id, name: p.name, avatar: p.avatar },
+            view: { title: `${room.game.emoji} ${room.game.name}`, subtitle: "Game in progress — you'll join the next round!", controls: [] },
+          });
+        }
       }
     }
-    if (reconnected) io.to(room.hostSocketId).emit('tv:toast', { text: `${player.name} reconnected.` });
+    if (wasReconnect) io.to(room.hostSocketId).emit('tv:toast', { text: `${accepted[0].name} reconnected.` });
   });
 
   socket.on('player:action', (action) => {
     const room = findRoomBySocket(socket.id);
     if (!room || room.phase !== 'game' || !room.game) return;
-    const player = getPlayerBySocket(room, socket.id);
-    if (!player) return;
+    // Resolve which seat is acting; must belong to this phone (socket).
+    const pid = action && action.pid;
+    const player = pid ? getPlayer(room, pid) : getPlayersBySocket(room, socket.id)[0];
+    if (!player || player.socketId !== socket.id) return;
     const ctx = createContext(io, room);
     room.game.onAction(ctx, player, action || {});
   });
@@ -172,12 +196,12 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const player = getPlayerBySocket(room, socket.id);
-    if (player) {
-      // Keep the player record so they can reconnect with the same avatar/score.
-      player.connected = false;
+    const seats = getPlayersBySocket(room, socket.id);
+    if (seats.length) {
+      // Keep the records so the phone can reconnect with the same avatars/scores.
+      for (const p of seats) p.connected = false;
       sendLobby(room);
-      io.to(room.hostSocketId).emit('tv:toast', { text: `${player.name} went offline…` });
+      io.to(room.hostSocketId).emit('tv:toast', { text: `${seats[0].name} went offline…` });
       if (room.phase === 'game' && room.game && typeof room.game.sync === 'function') {
         room.game.sync(createContext(io, room));
       }

@@ -78,6 +78,31 @@ input[type=text]:focus { outline: none; border-color: var(--pink); }
 }
 .you-chip .av { font-size: 1.6rem; }
 
+/* multi-player join rows */
+.name-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.name-row input { flex: 1; }
+.name-rm {
+  flex: none; width: 44px; height: 44px; border-radius: 12px; border: none;
+  background: rgba(255,255,255,.12); color: #fff; font-size: 1.1rem;
+}
+.btn-secondary {
+  width: 100%; border: 2px dashed rgba(255,255,255,.3); background: transparent;
+  color: var(--muted); border-radius: 14px; padding: 12px; font-weight: 700; font-size: 1rem;
+}
+.hint-line { font-size: .85rem; color: var(--muted); margin-top: 8px; text-align: center; }
+
+/* seat bar (pass-and-play) */
+.seat-bar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 12px; }
+.seat-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.1); border: 2px solid transparent; border-radius: 999px;
+  padding: 6px 14px; font-weight: 700; color: var(--ink); font-size: 1rem;
+}
+.seat-chip .av { font-size: 1.3rem; }
+.seat-chip.active { background: rgba(34,197,94,.25); }
+.seat-chip.shown { border-color: var(--yellow); }
+.seat-chip:disabled { opacity: .6; }
+
 .controls { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
 .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .choice {
