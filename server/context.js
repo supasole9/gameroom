@@ -33,10 +33,11 @@ export function createContext(io, room) {
       toHost('tv:narrate', { text });
     },
 
-    // Push a controller UI description to one phone. See public/js/controller.js
-    // for the little declarative view protocol.
+    // Push a controller UI description to one phone (by stable clientId). See
+    // public/js/controller.js for the little declarative view protocol.
     view(playerId, viewObj) {
-      io.to(playerId).emit('controller:view', viewObj);
+      const p = room.players.get(playerId);
+      if (p && p.connected) io.to(p.socketId).emit('controller:view', viewObj);
     },
     // Convenience: render every connected player's controller from a function.
     renderControllers(fn) {

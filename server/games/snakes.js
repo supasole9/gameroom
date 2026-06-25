@@ -40,6 +40,12 @@ export default {
   maxPlayers: 6,
   blurb: 'Roll, climb ladders, dodge snakes. First to 100 wins!',
 
+  // Re-push current state to all screens (used when a phone reconnects).
+  sync(ctx) {
+    ctx.renderTV();
+    renderControllers(ctx);
+  },
+
   init(ctx) {
     const order = ctx.players.map((p) => p.id);
     const positions = {};

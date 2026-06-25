@@ -8,13 +8,19 @@ const gameStage = $('gameStage');
 
 let games = [];
 
-// On load, this screen becomes the host/TV.
-socket.on('connect', () => socket.emit('host:create'));
+// On load, this screen becomes the host/TV. We pass our own origin so the
+// server can build a QR code that points exactly where we're served from.
+socket.on('connect', () => socket.emit('host:create', { origin: location.origin }));
 
-socket.on('host:created', ({ code, games: catalogue }) => {
+socket.on('host:created', ({ code, games: catalogue, joinUrl, qr }) => {
   games = catalogue;
   $('roomCode').textContent = code;
-  $('joinUrl').textContent = location.host;
+  $('joinUrl').textContent = (joinUrl || location.origin + '/').replace(/^https?:\/\//, '');
+  if (qr) {
+    const img = $('qrImg');
+    img.src = qr;
+    img.classList.remove('hide');
+  }
   renderGamesGrid();
 });
 
@@ -38,9 +44,14 @@ function renderPlayers(players, target) {
   target.innerHTML = '';
   for (const p of players || []) {
     const tok = document.createElement('div');
-    tok.className = 'player-tok';
+    tok.className = 'player-tok' + (p.connected ? '' : ' offline');
     tok.dataset.id = p.id;
-    tok.innerHTML = `<span class="av">${p.avatar}</span><span class="nm">${escapeHtml(p.name)}</span>`;
+    const status = p.connected ? '' : '<span class="off-tag">offline</span>';
+    tok.innerHTML = `<button class="rm" title="Remove player">✕</button>
+      <span class="av">${p.avatar}</span><span class="nm">${escapeHtml(p.name)}</span>${status}`;
+    tok.querySelector('.rm').addEventListener('click', () => {
+      socket.emit('host:removePlayer', { clientId: p.id });
+    });
     target.appendChild(tok);
   }
 }

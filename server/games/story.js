@@ -128,6 +128,11 @@ export default {
   maxPlayers: 6,
   blurb: 'Build a silly story together — the TV reads it aloud!',
 
+  sync(ctx) {
+    ctx.renderTV();
+    renderControllers(ctx);
+  },
+
   init(ctx) {
     startNewStory(ctx);
   },

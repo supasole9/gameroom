@@ -5,8 +5,27 @@ const $ = (id) => document.getElementById(id);
 const joinScreen = $('joinScreen');
 const playScreen = $('playScreen');
 const controlsEl = $('controls');
+const netStatus = $('netStatus');
+
+// Stable per-device identity so a sleeping phone keeps its avatar + score.
+function getClientId() {
+  let id = localStorage.getItem('arcadeClientId');
+  if (!id) {
+    id = (crypto.randomUUID && crypto.randomUUID()) || ('c' + Date.now() + Math.random().toString(36).slice(2));
+    localStorage.setItem('arcadeClientId', id);
+  }
+  return id;
+}
+const clientId = getClientId();
 
 let joined = false;
+let savedJoin = JSON.parse(localStorage.getItem('arcadeJoin') || 'null');
+
+// Prefill the form if we played recently.
+if (savedJoin) {
+  $('code').value = savedJoin.code || '';
+  $('name').value = savedJoin.name || '';
+}
 
 // ---------- Join ----------
 function tryJoin() {
@@ -17,14 +36,16 @@ function tryJoin() {
     return;
   }
   $('joinError').textContent = '';
-  socket.emit('player:join', { code, name });
+  savedJoin = { code, name };
+  socket.emit('player:join', { code, name, clientId });
 }
 $('joinBtn').addEventListener('click', tryJoin);
 $('code').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase(); });
 $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryJoin(); });
 
-socket.on('controller:joined', ({ name, avatar }) => {
+socket.on('controller:joined', ({ name, avatar, code }) => {
   joined = true;
+  localStorage.setItem('arcadeJoin', JSON.stringify({ code, name }));
   $('youAv').textContent = avatar;
   $('youName').textContent = name;
   joinScreen.classList.add('hide');
@@ -35,13 +56,23 @@ socket.on('controller:error', ({ text }) => {
   if (!joined) {
     $('joinError').textContent = text;
   } else {
-    showWaiting('👋 ' + text, 'Reload to join a new game.');
+    // The TV closed the room (or we were removed). Stop auto-rejoining.
+    joined = false;
+    savedJoin = null;
+    localStorage.removeItem('arcadeJoin');
+    showWaiting('👋 ' + text, 'Tap below to join a new game.');
+    controlsEl.innerHTML = '';
+    const b = document.createElement('button');
+    b.className = 'btn';
+    b.textContent = 'Back to start';
+    b.addEventListener('click', () => location.reload());
+    controlsEl.appendChild(b);
   }
 });
 
-socket.on('controller:lobby', ({ phase, gameName }) => {
+socket.on('controller:lobby', ({ phase }) => {
   if (phase === 'lobby') {
-    showWaiting('You\'re in! 🎉', 'Look at the TV and pick a game…');
+    showWaiting("You're in! 🎉", 'Look at the TV and pick a game…');
   }
 });
 
@@ -50,6 +81,21 @@ function showWaiting(title, sub) {
   $('ctrlSub').textContent = sub || '';
   controlsEl.innerHTML = '';
 }
+
+// ---------- Connection status + auto-rejoin ----------
+socket.on('connect', () => {
+  netStatus.classList.add('hide');
+  // If we were playing, silently reclaim our slot after a drop/sleep.
+  if (savedJoin) {
+    socket.emit('player:join', { code: savedJoin.code, name: savedJoin.name, clientId });
+  }
+});
+socket.on('disconnect', () => {
+  if (joined) {
+    netStatus.textContent = '📡 Reconnecting…';
+    netStatus.classList.remove('hide');
+  }
+});
 
 // ---------- Declarative controller views ----------
 socket.on('controller:view', (view) => renderView(view));
@@ -140,7 +186,7 @@ function buildControl(c) {
 }
 
 // ---------- Drawing pad ----------
-function buildDrawPad(controlId) {
+function buildDrawPad() {
   const wrap = document.createElement('div');
   wrap.className = 'pad-wrap';
   const canvas = document.createElement('canvas');
@@ -189,9 +235,5 @@ function buildDrawPad(controlId) {
   canvas.addEventListener('touchstart', start, { passive: false });
   canvas.addEventListener('touchmove', move, { passive: false });
   canvas.addEventListener('touchend', end);
-
-  // Local clear when the server confirms (we just clear our own canvas on demand).
-  wrap._clear = () => ctx.clearRect(0, 0, canvas.width, canvas.height);
-  socket.on('controller:clearPad', wrap._clear);
   return wrap;
 }

@@ -76,6 +76,12 @@ export default {
   maxPlayers: 6,
   blurb: 'One artist draws, everyone else guesses. Live on the TV!',
 
+  sync(ctx) {
+    // Canvas strokes aren't replayed, but the round/role/choices are restored.
+    ctx.renderTV();
+    renderControllers(ctx);
+  },
+
   init(ctx) {
     ctx.state = null;
     startRound(ctx);

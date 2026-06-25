@@ -101,6 +101,12 @@ input[type=text]:focus { outline: none; border-color: var(--pink); }
 .error { color: var(--red); text-align: center; margin-top: 10px; font-weight: 700; }
 .hide { display: none !important; }
 
+.net-status {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--red); color: #fff; text-align: center;
+  padding: 10px; font-weight: 800;
+}
+
 /* drawing pad */
 .pad-wrap { background: #fff; border-radius: 16px; overflow: hidden; }
 canvas.pad { display: block; width: 100%; touch-action: none; background: #fff; }
@@ -117,6 +123,8 @@ canvas.pad { display: block; width: 100%; touch-action: none; background: #fff; 
 .tv-code-box .lbl { font-size: 1.3vw; color: var(--muted); }
 .tv-code { font-size: 4vw; font-weight: 900; letter-spacing: .1em; color: var(--yellow); }
 .tv-url { font-size: 1.4vw; color: var(--muted); }
+.join-row { display: flex; align-items: center; gap: 1.2vw; }
+.qr { width: 11vh; height: 11vh; border-radius: 10px; background: #fff; padding: 6px; }
 
 .lobby-main { flex: 1; display: grid; grid-template-columns: 1fr 1.4fr; gap: 3vw; }
 .players-panel h2 { font-size: 2vw; }
@@ -125,9 +133,18 @@ canvas.pad { display: block; width: 100%; touch-action: none; background: #fff; 
   display: flex; flex-direction: column; align-items: center;
   background: rgba(255, 255, 255, .1); border-radius: 18px; padding: 1.2vw 1.6vw; min-width: 7vw;
 }
+.player-tok { position: relative; }
 .player-tok .av { font-size: 3.5vw; }
 .player-tok .nm { font-size: 1.4vw; font-weight: 700; }
 .player-tok .sc { font-size: 1.2vw; color: var(--yellow); }
+.player-tok.offline { opacity: .4; }
+.player-tok .off-tag { font-size: 1vw; color: var(--red); font-weight: 700; }
+.player-tok .rm {
+  position: absolute; top: -.6vw; right: -.6vw; width: 2vw; height: 2vw;
+  border-radius: 50%; border: none; background: var(--red); color: #fff;
+  font-size: 1vw; line-height: 1; cursor: pointer; opacity: 0; transition: opacity .15s;
+}
+.player-tok:hover .rm { opacity: 1; }
 .empty-hint { color: var(--muted); font-size: 1.6vw; }
 
 .games-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; align-content: start; }

@@ -22,9 +22,18 @@ npm start
 The terminal prints two URLs:
 
 - 📺 **On the TV / computer:** open `http://<your-ip>:3000/tv.html` (cast this browser tab to the TV).
-- 📱 **On each phone:** open `http://<your-ip>:3000/` and enter the room code shown on the TV.
+- 📱 **On each phone:** either **scan the QR code** shown on the TV, or open `http://<your-ip>:3000/` and type the 4-letter room code.
 
 Everyone must be on the **same Wi-Fi**. Then pick a game on the TV and play!
+
+### Built for real living rooms
+
+- **Scan-to-join QR** on the TV — no typing IP addresses.
+- **Reconnection:** if a kid's phone locks or drops Wi-Fi, it silently rejoins
+  with the **same avatar and score** (each phone keeps a stable id in
+  `localStorage`). A "Reconnecting…" banner shows while it's offline.
+- **Host controls:** offline players are greyed out on the TV; hover a player
+  to remove a stale slot.
 
 > Tip: the TV uses the browser's built-in speech to narrate. If you hear nothing,
 > click a game card once (browsers require a click before they'll play audio).
