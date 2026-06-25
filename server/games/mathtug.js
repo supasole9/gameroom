@@ -99,13 +99,7 @@ function renderControllers(ctx) {
     }
 
     // play
-    const q = s.questions[p.id];
-    const pullDir = sideOf(ctx, p.id) < 0 ? '⬅️ Pull LEFT!' : 'Pull RIGHT! ➡️';
-    return {
-      title: `${q.text} = ?`,
-      subtitle: `${pullDir}  Tap the answer fast!`,
-      controls: [{ type: 'choices', id: 'answer', options: q.options }],
-    };
+    return playView(ctx, p.id);
   });
 }
 
@@ -210,14 +204,17 @@ export default {
   },
 };
 
-// Single-competitor play view (used for incremental updates without re-rendering
-// the opponent, so their in-progress question isn't disturbed).
-function controllerViewFor(ctx, cid) {
+// The play view: a big equation + big answer buttons, tuned for fast tapping.
+function playView(ctx, cid) {
   const q = ctx.state.questions[cid];
-  const pullDir = sideOf(ctx, cid) < 0 ? '⬅️ Pull LEFT!' : 'Pull RIGHT! ➡️';
+  const pullDir = sideOf(ctx, cid) < 0 ? '⬅️ Pull LEFT' : 'Pull RIGHT ➡️';
   return {
-    title: `${q.text} = ?`,
-    subtitle: `${pullDir}  Tap the answer fast!`,
-    controls: [{ type: 'choices', id: 'answer', options: q.options }],
+    title: pullDir,
+    controls: [
+      { type: 'prompt', value: `${q.text} = ?` },
+      { type: 'choices', id: 'answer', big: true, options: q.options },
+    ],
   };
 }
+// Alias kept for the incremental-update call site.
+const controllerViewFor = playView;

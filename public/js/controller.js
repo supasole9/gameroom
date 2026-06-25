@@ -215,6 +215,12 @@ function buildControl(c) {
     d.textContent = c.value;
     return d;
   }
+  if (c.type === 'prompt') {
+    const d = document.createElement('div');
+    d.className = 'ctrl-prompt';
+    d.textContent = c.value;
+    return d;
+  }
   if (c.type === 'choices') {
     const wrap = document.createElement('div');
     if (c.label) {
@@ -224,7 +230,7 @@ function buildControl(c) {
       wrap.appendChild(l);
     }
     const grid = document.createElement('div');
-    grid.className = 'choices';
+    grid.className = 'choices' + (c.big ? ' big' : '');
     for (const opt of c.options) {
       const b = document.createElement('button');
       b.className = 'choice';

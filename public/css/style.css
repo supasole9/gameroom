@@ -116,6 +116,22 @@ input[type=text]:focus { outline: none; border-color: var(--pink); }
 .ctrl-sub { text-align: center; color: var(--muted); margin-bottom: 8px; }
 .ctrl-text { text-align: center; font-size: 1.1rem; opacity: .85; }
 
+/* Big prompt (e.g. a math equation to race on) */
+.ctrl-prompt {
+  text-align: center;
+  font-size: clamp(2.6rem, 13vw, 4rem);
+  font-weight: 900; line-height: 1.1;
+  margin: 10px 0 14px; letter-spacing: .02em;
+}
+
+/* Big answer grid — large, easy to tap fast during a race */
+.choices.big { gap: 14px; }
+.choices.big .choice {
+  padding: clamp(26px, 9vw, 48px) 10px;
+  font-size: clamp(2rem, 9vw, 3rem);
+  border-radius: 20px;
+}
+
 .flash-wrong { animation: shake .4s; }
 @keyframes shake {
   0%,100% { transform: translateX(0); }
