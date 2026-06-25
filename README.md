@@ -12,6 +12,7 @@ Built so you can keep adding games to the arcade. Three are included:
 | **Story Builder** | 📖 | Take turns adding silly words to a mad-lib. When it's done, the TV **reads the whole story aloud**. |
 | **Draw & Guess** | 🎨 | One player draws a secret word on their phone — it appears live on the TV — everyone else taps to guess. |
 | **Math Tug of War** | 🪢 | 2-player duel: answer math questions fast to pull the rope your way. Each player picks their own difficulty, so mixed ages compete fairly. |
+| **Lāʻie & Kahuku** | 🏝️ | Monopoly-lite around the real North Shore towns — buy shrimp trucks, beaches and farms, pay rent, draw Hukilau cards. Richest player wins (nobody gets eliminated early). |
 
 ## Run it
 

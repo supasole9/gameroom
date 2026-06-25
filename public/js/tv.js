@@ -84,6 +84,7 @@ socket.on('tv:game', (payload) => {
     case 'story': renderStory(payload); break;
     case 'draw': renderDraw(payload); break;
     case 'mathtug': renderMathTug(payload); break;
+    case 'laie': renderLaie(payload); break;
   }
 });
 
@@ -291,6 +292,73 @@ function renderMathTug(payload) {
     </div>`;
 
   if (isOver) confettiBurst();
+}
+
+// ---------- Lāʻie & Kahuku (Monopoly-lite) ----------
+// Map a board index (0..23) to a cell on the 7x7 perimeter ring.
+function ringCell(i) {
+  if (i <= 6) return { r: 1, c: i + 1 };          // top row, left→right
+  if (i <= 12) return { r: i - 5, c: 7 };         // right col, top→bottom
+  if (i <= 18) return { r: 7, c: 7 - (i - 12) };  // bottom row, right→left
+  return { r: 7 - (i - 18), c: 1 };               // left col, bottom→top
+}
+
+function renderLaie(payload) {
+  const s = payload.state;
+  const players = payload.players || [];
+  const find = (cid) => players.find((p) => p.id === cid) || { avatar: '🎮', name: '—' };
+  const curId = s.order[s.turnIndex];
+
+  // tokens on each space
+  const tokensOn = {};
+  for (const cid of s.order) {
+    const pos = s.positions[cid];
+    (tokensOn[pos] = tokensOn[pos] || []).push(find(cid).avatar);
+  }
+
+  let cells = '';
+  for (let i = 0; i < s.board.length; i++) {
+    const sp = s.board[i];
+    const { r, c } = ringCell(i);
+    const owner = s.owners[i];
+    const ownerAv = owner ? find(owner).avatar : '';
+    const band = sp.color ? `<div class="lc-band" style="background:${sp.color}"></div>` : '';
+    const foot = sp.type === 'prop'
+      ? `<div class="lc-foot">${ownerAv ? ownerAv : '$' + sp.price}</div>`
+      : (sp.note ? `<div class="lc-foot lc-note">${escapeHtml(sp.note)}</div>` : '');
+    const toks = (tokensOn[i] || []).map((a) => `<span>${a}</span>`).join('');
+    cells += `<div class="lc ${sp.type}" style="grid-row:${r};grid-column:${c}">
+      ${band}
+      <div class="lc-emoji">${sp.emoji}</div>
+      <div class="lc-name">${escapeHtml(sp.name)}</div>
+      ${foot}
+      <div class="lc-toks">${toks}</div>
+    </div>`;
+  }
+
+  // center: dice + message + leaderboard
+  const ranked = s.order.map((cid) => ({ cid, cash: s.cash[cid], worth: s.board.reduce((a, sp, idx) => a + (s.owners[idx] === cid ? sp.price : 0), s.cash[cid]) }));
+  const board = ranked.map((e) => {
+    const p = find(e.cid);
+    const isCur = e.cid === curId && s.phase !== 'over';
+    const isWin = s.winner === e.cid;
+    return `<div class="lb-row ${isCur ? 'lb-cur' : ''} ${isWin ? 'lb-win' : ''}">
+      <span class="lb-av">${p.avatar}</span>
+      <span class="lb-nm">${escapeHtml(p.name)}</span>
+      <span class="lb-cash">$${e.cash}</span>
+    </div>`;
+  }).join('');
+
+  const center = `<div class="lc-center" style="grid-row:2/7;grid-column:2/7">
+    <div class="lc-title">🏝️ Lāʻie &amp; Kahuku</div>
+    <div class="lc-dice ${payload.animateRoll ? 'rolling' : ''}">${diceFace(s.dice)}</div>
+    ${s.card ? `<div class="lc-card">🃏 ${escapeHtml(s.card)}</div>` : ''}
+    <div class="lc-msg">${escapeHtml(s.message || '')}</div>
+    <div class="lc-board">${board}</div>
+  </div>`;
+
+  gameStage.innerHTML = `<div class="laie-board">${cells}${center}</div>`;
+  if (s.winner) confettiBurst();
 }
 
 // ---------- Narration ----------

@@ -251,6 +251,46 @@ canvas#tvDraw { display: block; border-radius: 18px; max-width: 88vw; max-height
 .tug-hint { font-size: 1.8vw; color: var(--muted); margin-top: 3vh; }
 .tug-result { font-size: 4vw; font-weight: 900; color: var(--yellow); margin-top: 3vh; }
 
+/* Lāʻie & Kahuku board */
+.laie-board {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(7, 1fr);
+  gap: .5vh; aspect-ratio: 1; max-height: 82vh; margin: 0 auto; width: auto;
+}
+.lc {
+  position: relative; border-radius: 8px; background: rgba(255,255,255,.08);
+  padding: .3vh .2vw; overflow: hidden; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+}
+.lc.go, .lc.rest, .lc.loseturn { background: rgba(255,209,102,.18); }
+.lc.chance { background: rgba(124,92,255,.18); }
+.lc-band { position: absolute; top: 0; left: 0; right: 0; height: .8vh; }
+.lc-emoji { font-size: 2vw; line-height: 1; margin-top: .6vh; }
+.lc-name { font-size: .78vw; font-weight: 700; line-height: 1.05; margin-top: .2vh; }
+.lc-foot { font-size: .85vw; font-weight: 800; color: var(--yellow); margin-top: .1vh; }
+.lc-foot.lc-note { font-size: .62vw; color: var(--muted); font-weight: 600; }
+.lc-toks { position: absolute; bottom: 1px; left: 0; right: 0; display: flex; flex-wrap: wrap; justify-content: center; }
+.lc-toks span { font-size: 1.3vw; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+
+.lc-center {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 1vh;
+}
+.lc-title { font-size: 2.2vw; font-weight: 900; color: var(--yellow); }
+.lc-dice { font-size: 5vw; line-height: 1; }
+.lc-dice.rolling { animation: tumble .6s ease; }
+.lc-card { font-size: 1.2vw; color: #ddd6ff; margin: .4vh 0; max-width: 30vw; }
+.lc-msg { font-size: 1.3vw; color: #fff; min-height: 1.6vw; max-width: 32vw; }
+.lc-board { margin-top: 1vh; width: 26vw; max-width: 100%; }
+.lb-row { display: flex; align-items: center; gap: .6vw; padding: .2vh .6vw; border-radius: 8px; }
+.lb-row.lb-cur { background: rgba(255,209,102,.25); outline: 2px solid var(--yellow); }
+.lb-row.lb-win { background: rgba(34,197,94,.3); }
+.lb-av { font-size: 1.6vw; }
+.lb-nm { flex: 1; text-align: left; font-size: 1.2vw; font-weight: 700; }
+.lb-cash { font-size: 1.2vw; font-weight: 800; color: var(--yellow); }
+
 /* toast */
 #toast {
   position: fixed; bottom: 4vh; left: 50%; transform: translateX(-50%);

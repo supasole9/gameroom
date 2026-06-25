@@ -3,8 +3,9 @@ import snakes from './snakes.js';
 import story from './story.js';
 import draw from './draw.js';
 import mathtug from './mathtug.js';
+import laie from './laie.js';
 
-const games = [snakes, story, draw, mathtug];
+const games = [snakes, story, draw, mathtug, laie];
 
 export const registry = new Map(games.map((g) => [g.id, g]));
 
