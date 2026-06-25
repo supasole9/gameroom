@@ -29,6 +29,9 @@ let mySeats = [];                 // authoritative seats from the server [{pid,n
 const seatViews = new Map();      // pid -> { seat, view }
 let shownPid = null;              // seat currently displayed
 let actingPid = null;             // seat an action will be attributed to
+let palette = [];                 // available emojis to pick from
+let takenSet = new Set();         // emojis already used in the room
+let currentScreen = 'join';       // 'join' | 'lobby' | 'game'
 
 // ---------- Join screen: dynamic name rows ----------
 function addNameRow(name = '') {
@@ -62,8 +65,11 @@ $('addPlayer').addEventListener('click', () => addNameRow(''));
 $('code').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase(); });
 
 function buildSeats(names) {
-  // Reuse existing pids by position so reconnection keeps avatars/scores.
-  return names.map((name, i) => ({ pid: (savedSeats && savedSeats[i] && savedSeats[i].pid) || newPid(), name }));
+  // Reuse existing pids/avatars by position so reconnection keeps choices.
+  return names.map((name, i) => {
+    const prev = savedSeats && savedSeats[i];
+    return { pid: (prev && prev.pid) || newPid(), name, avatar: prev && prev.avatar };
+  });
 }
 
 function tryJoin() {
@@ -81,15 +87,34 @@ function tryJoin() {
 $('joinBtn').addEventListener('click', tryJoin);
 
 // ---------- Join result ----------
-socket.on('controller:joined', ({ seats }) => {
+socket.on('controller:joined', ({ seats, palette: pal }) => {
   joined = true;
   mySeats = seats || [];
-  // persist accepted seats (server is authoritative on which were allowed)
-  savedSeats = mySeats.map((s) => ({ pid: s.pid, name: s.name }));
-  localStorage.setItem('arcadeSeats', JSON.stringify(savedSeats));
+  if (pal) palette = pal;
+  persistSeats();
   joinScreen.classList.add('hide');
   playScreen.classList.remove('hide');
   renderSeatBar(new Set());
+});
+
+function persistSeats() {
+  savedSeats = mySeats.map((s) => ({ pid: s.pid, name: s.name, avatar: s.avatar }));
+  localStorage.setItem('arcadeSeats', JSON.stringify(savedSeats));
+}
+
+// Server confirms updated seats (e.g. after an emoji change).
+socket.on('controller:seats', ({ seats }) => {
+  const byPid = new Map((seats || []).map((s) => [s.pid, s]));
+  mySeats = mySeats.map((s) => byPid.get(s.pid) || s);
+  persistSeats();
+  if (currentScreen === 'lobby') renderLobby();
+  else renderSeatBar(new Set(mySeats.filter((s) => isInteractive((seatViews.get(s.pid) || {}).view || {})).map((s) => s.pid)));
+});
+
+// Which emojis are taken across the room (so pickers disable them).
+socket.on('controller:roster', ({ taken }) => {
+  takenSet = new Set(taken || []);
+  if (currentScreen === 'lobby') renderLobby();
 });
 
 socket.on('controller:error', ({ text }) => {
@@ -114,8 +139,41 @@ socket.on('controller:removed', ({ pid }) => {
 });
 
 socket.on('controller:lobby', ({ phase }) => {
-  if (phase === 'lobby') { seatViews.clear(); showWaiting("You're in! 🎉", 'Look at the TV and pick a game…'); renderSeatBar(new Set()); }
+  if (phase === 'lobby') { currentScreen = 'lobby'; seatViews.clear(); renderLobby(); }
+  else { currentScreen = 'game'; }
 });
+
+// Lobby/waiting screen with an emoji picker for each of this phone's players.
+function renderLobby() {
+  renderSeatBar(new Set());
+  $('ctrlTitle').textContent = "You're in! 🎉";
+  $('ctrlSub').textContent = 'Tap to pick your emoji, then watch the TV…';
+  controlsEl.innerHTML = '';
+  for (const seat of mySeats) {
+    const block = document.createElement('div');
+    block.className = 'seat-edit';
+    const label = document.createElement('div');
+    label.className = 'seat-edit-name';
+    label.innerHTML = `<span class="big-av">${seat.avatar || '🎮'}</span> ${seat.name}`;
+    block.appendChild(label);
+    const grid = document.createElement('div');
+    grid.className = 'emoji-pick';
+    for (const emo of palette) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'emoji-opt' + (emo === seat.avatar ? ' selected' : '');
+      b.textContent = emo;
+      if (takenSet.has(emo) && emo !== seat.avatar) {
+        b.disabled = true;
+      } else {
+        b.addEventListener('click', () => socket.emit('player:setAvatar', { pid: seat.pid, avatar: emo }));
+      }
+      grid.appendChild(b);
+    }
+    block.appendChild(grid);
+    controlsEl.appendChild(block);
+  }
+}
 
 socket.on('controller:toast', ({ text }) => { $('ctrlSub').textContent = text; });
 
@@ -156,6 +214,7 @@ function renderAll() {
   else if (activeSet.size > 1) pick = entries.find((e) => e.seat.pid === shownPid && activeSet.has(e.seat.pid)) || entries.find((e) => activeSet.has(e.seat.pid));
   else pick = entries.find((e) => e.seat.pid === shownPid) || entries[0];
 
+  currentScreen = 'game';
   shownPid = pick.seat.pid;
   actingPid = pick.seat.pid;
   renderSeatBar(activeSet);

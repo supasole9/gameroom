@@ -103,6 +103,18 @@ input[type=text]:focus { outline: none; border-color: var(--pink); }
 .seat-chip.shown { border-color: var(--yellow); }
 .seat-chip:disabled { opacity: .6; }
 
+/* emoji picker (lobby) */
+.seat-edit { margin-bottom: 18px; }
+.seat-edit-name { font-size: 1.2rem; font-weight: 800; text-align: center; margin-bottom: 8px; }
+.seat-edit-name .big-av { font-size: 2rem; vertical-align: middle; }
+.emoji-pick { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.emoji-opt {
+  font-size: 1.7rem; padding: 8px 0; border-radius: 12px; border: 2px solid transparent;
+  background: rgba(255,255,255,.1); line-height: 1;
+}
+.emoji-opt.selected { border-color: var(--yellow); background: rgba(255,209,102,.25); }
+.emoji-opt:disabled { opacity: .25; }
+
 .controls { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
 .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .choice {
