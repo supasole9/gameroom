@@ -209,6 +209,35 @@ canvas.pad { display: block; width: 100%; touch-action: none; background: #fff; 
 canvas#tvDraw { display: block; border-radius: 18px; }
 .draw-result { font-size: 3vw; color: var(--yellow); text-align: center; }
 
+/* Math Tug of War */
+.tug-stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 4vw; }
+.tug-pick { text-align: center; background: rgba(255,255,255,.08); border-radius: 22px; padding: 2vw 3vw; }
+.tug-header { display: flex; justify-content: space-between; align-items: center; width: 90vw; margin-bottom: 3vh; }
+.tug-side { display: flex; flex-direction: column; align-items: center; }
+.tug-side .av { font-size: 5vw; }
+.tug-side .nm { font-size: 2vw; font-weight: 800; }
+.tug-side .meta { font-size: 1.3vw; color: var(--muted); }
+.tug-side.left .nm { color: var(--pink); }
+.tug-side.right .nm { color: var(--yellow); }
+.tug-vs { font-size: 2.4vw; font-weight: 900; color: var(--muted); }
+
+.tug-track {
+  position: relative; width: 90vw; height: 10vh;
+  background: rgba(255,255,255,.06); border-radius: 999px; overflow: hidden;
+  border: 3px solid rgba(255,255,255,.12);
+}
+.tug-zone { position: absolute; top: 0; bottom: 0; width: 12%; }
+.tug-zone.zleft { left: 0; background: linear-gradient(90deg, rgba(255,107,157,.5), transparent); }
+.tug-zone.zright { right: 0; background: linear-gradient(270deg, rgba(255,209,102,.5), transparent); }
+.tug-rope { position: absolute; top: 50%; left: 0; right: 0; height: 6px; background: repeating-linear-gradient(90deg,#c9a06a 0 14px,#a87f48 14px 28px); transform: translateY(-50%); }
+.tug-knot {
+  position: absolute; top: 50%; transform: translate(-50%, -50%);
+  font-size: 6vh; transition: left .25s ease;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,.5));
+}
+.tug-hint { font-size: 1.8vw; color: var(--muted); margin-top: 3vh; }
+.tug-result { font-size: 4vw; font-weight: 900; color: var(--yellow); margin-top: 3vh; }
+
 /* toast */
 #toast {
   position: fixed; bottom: 4vh; left: 50%; transform: translateX(-50%);

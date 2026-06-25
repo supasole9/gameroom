@@ -11,6 +11,7 @@ Built so you can keep adding games to the arcade. Three are included:
 | **Snakes & Ladders** | 🐍 | Tap to roll the dice, climb ladders, dodge snakes. First to 100 wins. The TV narrates every roll. |
 | **Story Builder** | 📖 | Take turns adding silly words to a mad-lib. When it's done, the TV **reads the whole story aloud**. |
 | **Draw & Guess** | 🎨 | One player draws a secret word on their phone — it appears live on the TV — everyone else taps to guess. |
+| **Math Tug of War** | 🪢 | 2-player duel: answer math questions fast to pull the rope your way. Each player picks their own difficulty, so mixed ages compete fairly. |
 
 ## Run it
 

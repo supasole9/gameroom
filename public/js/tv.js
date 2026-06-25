@@ -83,6 +83,7 @@ socket.on('tv:game', (payload) => {
     case 'snakes': renderSnakes(payload); break;
     case 'story': renderStory(payload); break;
     case 'draw': renderDraw(payload); break;
+    case 'mathtug': renderMathTug(payload); break;
   }
 });
 
@@ -234,6 +235,63 @@ socket.on('draw:stroke', ({ from, to }) => {
 socket.on('draw:clear', () => {
   if (tvDrawCtx) tvDrawCtx.clearRect(0, 0, tvDrawCtx._w, tvDrawCtx._h);
 });
+
+// ---------- Math Tug of War ----------
+const DIFF_LABEL = { easy: '😊 Easy', medium: '🙂 Medium', hard: '😎 Hard' };
+function renderMathTug(payload) {
+  const s = payload.state;
+  const players = payload.players || [];
+  const find = (cid) => players.find((p) => p.id === cid) || { avatar: '🎮', name: '—' };
+  const A = find(s.competitors[0]);
+  const B = find(s.competitors[1]);
+
+  if (s.phase === 'setup') {
+    const card = (cid, p) => {
+      const d = s.difficulty[cid];
+      return `<div class="tug-pick">
+        <div class="av" style="font-size:5vw">${p.avatar}</div>
+        <div style="font-size:2vw;font-weight:800">${escapeHtml(p.name)}</div>
+        <div style="font-size:1.6vw;color:${d ? 'var(--green)' : 'var(--muted)'}">${d ? DIFF_LABEL[d] + ' ✓' : 'choosing…'}</div>
+      </div>`;
+    };
+    gameStage.innerHTML = `
+      <div class="tug-stage">
+        <h2 style="font-size:3vw">🪢 Math Tug of War</h2>
+        <p style="font-size:1.8vw;color:var(--muted)">Each player, pick your level on your phone!</p>
+        <div style="display:flex;gap:6vw;margin-top:3vh">${card(s.competitors[0], A)}${card(s.competitors[1], B)}</div>
+      </div>`;
+    return;
+  }
+
+  const pct = ((s.position + s.win) / (2 * s.win)) * 100;
+  const isOver = s.phase === 'over';
+  gameStage.innerHTML = `
+    <div class="tug-stage">
+      <div class="tug-header">
+        <div class="tug-side left">
+          <span class="av">${A.avatar}</span>
+          <span class="nm">${escapeHtml(A.name)}</span>
+          <span class="meta">${DIFF_LABEL[s.difficulty[s.competitors[0]]] || ''} · ${s.pulls[s.competitors[0]] || 0} pulls</span>
+        </div>
+        <div class="tug-vs">⬅️ TUG ➡️</div>
+        <div class="tug-side right">
+          <span class="av">${B.avatar}</span>
+          <span class="nm">${escapeHtml(B.name)}</span>
+          <span class="meta">${DIFF_LABEL[s.difficulty[s.competitors[1]]] || ''} · ${s.pulls[s.competitors[1]] || 0} pulls</span>
+        </div>
+      </div>
+      <div class="tug-track">
+        <div class="tug-zone zleft"></div>
+        <div class="tug-zone zright"></div>
+        <div class="tug-rope"></div>
+        <div class="tug-knot" style="left:${pct}%">🎌</div>
+      </div>
+      ${isOver ? `<div class="tug-result">🎉 ${escapeHtml(find(s.winner).name)} wins!</div>`
+        : `<div class="tug-hint">Answer fast on your phone to pull the flag your way!</div>`}
+    </div>`;
+
+  if (isOver) confettiBurst();
+}
 
 // ---------- Narration ----------
 function primeSpeech() {
