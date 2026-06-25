@@ -305,7 +305,8 @@ canvas#tvDraw { display: block; border-radius: 18px; }
   align-items: center; justify-content: center; text-align: center;
 }
 .lc.go, .lc.rest, .lc.loseturn { background: rgba(255,209,102,.18); }
-.lc.chance { background: rgba(124,92,255,.18); }
+.lc.mystery.hukilau { background: rgba(124,92,255,.22); }
+.lc.mystery.talkstory { background: rgba(255,209,102,.22); }
 .lc-band { position: absolute; top: 0; left: 0; right: 0; height: .8vh; }
 .lc-emoji { font-size: 2vw; line-height: 1; margin-top: .6vh; }
 .lc-name { font-size: .78vw; font-weight: 700; line-height: 1.05; margin-top: .2vh; }
@@ -322,7 +323,16 @@ canvas#tvDraw { display: block; border-radius: 18px; }
 .lc-title { font-size: 2.2vw; font-weight: 900; color: var(--yellow); }
 .lc-dice { font-size: 5vw; line-height: 1; }
 .lc-dice.rolling { animation: tumble .6s ease; }
-.lc-card { font-size: 1.2vw; color: #ddd6ff; margin: .4vh 0; max-width: 30vw; }
+.lc-card {
+  margin: .8vh 0; max-width: 26vw; border-radius: 14px;
+  padding: 1vh 1.4vw; border: 2px solid; animation: cardpop .4s ease;
+  box-shadow: 0 6px 24px rgba(0,0,0,.4);
+}
+.lc-card.hukilau { background: rgba(124,92,255,.3); border-color: var(--purple); }
+.lc-card.talkstory { background: rgba(255,209,102,.25); border-color: var(--yellow); }
+.lc-card-title { font-size: 1.2vw; font-weight: 900; margin-bottom: .3vh; }
+.lc-card-text { font-size: 1.25vw; color: #fff; }
+@keyframes cardpop { 0% { transform: scale(.6); opacity: 0; } 60% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
 .lc-msg { font-size: 1.3vw; color: #fff; min-height: 1.6vw; max-width: 32vw; }
 .lc-board { margin-top: 1vh; width: 26vw; max-width: 100%; }
 .lb-row { display: flex; align-items: center; gap: .6vw; padding: .2vh .6vw; border-radius: 8px; }
