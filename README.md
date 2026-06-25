@@ -30,6 +30,10 @@ Everyone must be on the **same Wi-Fi**. Then pick a game on the TV and play!
 
 ### Built for real living rooms
 
+- **Pass-and-play / shared phones:** one phone can hold several players — add
+  everyone's names when joining. In turn-based games (Lāʻie & Kahuku, Snakes,
+  Story) the phone automatically shows whoever's turn it is. A phone with one
+  player works exactly as before.
 - **Scan-to-join QR** on the TV — no typing IP addresses.
 - **Reconnection:** if a kid's phone locks or drops Wi-Fi, it silently rejoins
   with the **same avatar and score** (each phone keeps a stable id in

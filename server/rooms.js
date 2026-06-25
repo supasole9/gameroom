@@ -1,16 +1,17 @@
 // Room management: the arcade is a collection of rooms. Each room has one TV
-// (the host/shared screen) and many phone controllers (the players).
+// (the host/shared screen) and many phone controllers.
 //
-// Players have a STABLE identity (`clientId`, stored in the phone's
-// localStorage) that survives the phone sleeping / Wi-Fi dropping. The live
-// socket id can change on every reconnect; the clientId never does. This is
-// what lets a kid's phone lock mid-game and rejoin with the same avatar and
-// score.
+// A phone (identified by a stable `clientId` from localStorage) can hold one OR
+// MORE players ("seats") — this is the pass-and-play / hotseat feature, handy
+// for turn-based games where players share a device. Each seat is a full player
+// with its own stable id (`pid`), avatar, and score. Many seats can share one
+// `socketId` (the phone's live connection).
 
 const ROOM_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no easily-confused chars (O/0, I/1, L)
 const ROOM_CODE_LEN = 4;
+export const MAX_PLAYERS = 6;
 
-// A friendly pool of avatars so each kid gets a recognisable token on the TV.
+// A friendly pool of avatars so each player gets a recognisable token on the TV.
 export const AVATARS = ['🦊', '🐢', '🐸', '🦄', '🐙', '🐝', '🦁', '🐧', '🦖', '🐬', '🐼', '🦉'];
 
 const rooms = new Map();
@@ -20,7 +21,6 @@ function makeCode() {
   do {
     code = '';
     for (let i = 0; i < ROOM_CODE_LEN; i++) {
-      // Math.random is fine here: codes are short-lived and non-secret.
       code += ROOM_CODE_CHARS[Math.floor(Math.random() * ROOM_CODE_CHARS.length)];
     }
   } while (rooms.has(code));
@@ -32,59 +32,59 @@ export function createRoom(hostSocketId) {
   const room = {
     code,
     hostSocketId,
-    players: new Map(), // clientId -> { id, socketId, name, avatar, connected, score }
+    players: new Map(), // pid -> { id, clientId, socketId, name, avatar, connected, score }
     phase: 'lobby', // 'lobby' | 'game'
     gameId: null,
-    game: null, // the loaded game module
-    state: null, // game-specific state
+    game: null,
+    state: null,
   };
   rooms.set(code, room);
   return room;
 }
 
-export function getRoom(code) {
-  return rooms.get((code || '').toUpperCase());
-}
+export function getRoom(code) { return rooms.get((code || '').toUpperCase()); }
+export function deleteRoom(code) { rooms.delete(code); }
 
-export function deleteRoom(code) {
-  rooms.delete(code);
-}
+// Reconcile the seats a phone owns. `seats` is [{ pid, name }]. Existing seats
+// (matched by pid) are reconnected; new ones are created (up to the cap). When
+// `allowStructureChange` is true (lobby only), seats this phone dropped are
+// removed. Returns the phone's current seats and any that were rejected (full).
+export function syncPhoneSeats(room, clientId, socketId, seats, allowStructureChange) {
+  const incoming = new Set(seats.map((s) => s.pid));
+  const accepted = [];
+  let rejected = 0;
 
-// Add a brand-new player, or reconnect an existing one (same clientId).
-// Returns { player, reconnected }.
-export function upsertPlayer(room, clientId, socketId, name) {
-  const existing = room.players.get(clientId);
-  if (existing) {
-    existing.socketId = socketId;
-    existing.connected = true;
-    if (name) existing.name = name.slice(0, 14);
-    return { player: existing, reconnected: true };
+  for (const { pid, name } of seats) {
+    let p = room.players.get(pid);
+    if (p) {
+      p.socketId = socketId;
+      p.connected = true;
+      if (allowStructureChange && name) p.name = name.slice(0, 14);
+    } else {
+      if (room.players.size >= MAX_PLAYERS) { rejected++; continue; }
+      const used = new Set([...room.players.values()].map((x) => x.avatar));
+      const avatar = AVATARS.find((a) => !used.has(a)) || '🎮';
+      p = {
+        id: pid, clientId, socketId,
+        name: (name || 'Player').slice(0, 14), avatar, connected: true, score: 0,
+      };
+      room.players.set(pid, p);
+    }
+    accepted.push(p);
   }
-  const used = new Set([...room.players.values()].map((p) => p.avatar));
-  const avatar = AVATARS.find((a) => !used.has(a)) || '🎮';
-  const player = {
-    id: clientId,
-    socketId,
-    name: (name || 'Player').slice(0, 14),
-    avatar,
-    connected: true,
-    score: 0,
-  };
-  room.players.set(clientId, player);
-  return { player, reconnected: false };
+
+  if (allowStructureChange) {
+    for (const [pid, p] of [...room.players]) {
+      if (p.clientId === clientId && !incoming.has(pid)) room.players.delete(pid);
+    }
+  }
+  return { accepted, rejected };
 }
 
-export function removePlayer(room, clientId) {
-  room.players.delete(clientId);
-}
-
-export function getPlayer(room, clientId) {
-  return room.players.get(clientId);
-}
-
-export function getPlayerBySocket(room, socketId) {
-  for (const p of room.players.values()) if (p.socketId === socketId) return p;
-  return null;
+export function removePlayer(room, pid) { room.players.delete(pid); }
+export function getPlayer(room, pid) { return room.players.get(pid); }
+export function getPlayersBySocket(room, socketId) {
+  return [...room.players.values()].filter((p) => p.socketId === socketId);
 }
 
 export function connectedCount(room) {
@@ -95,15 +95,10 @@ export function connectedCount(room) {
 
 export function publicPlayers(room) {
   return [...room.players.values()].map((p) => ({
-    id: p.id,
-    name: p.name,
-    avatar: p.avatar,
-    connected: p.connected,
-    score: p.score,
+    id: p.id, name: p.name, avatar: p.avatar, connected: p.connected, score: p.score,
   }));
 }
 
-// Find whichever room a socket belongs to (as host or player) — used on disconnect.
 export function findRoomBySocket(socketId) {
   for (const room of rooms.values()) {
     if (room.hostSocketId === socketId) return room;
@@ -112,6 +107,4 @@ export function findRoomBySocket(socketId) {
   return null;
 }
 
-export function allRooms() {
-  return rooms;
-}
+export function allRooms() { return rooms; }

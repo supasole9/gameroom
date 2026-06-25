@@ -12,16 +12,13 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-html, body { height: 100%; }
-
 body {
   margin: 0;
   font-family: 'Baloo 2', 'Comic Sans MS', 'Trebuchet MS', system-ui, sans-serif;
   background: radial-gradient(circle at 30% 10%, var(--bg2), var(--bg));
   color: var(--ink);
-  height: 100vh;
-  height: 100dvh; /* fit mobile viewport (accounts for browser chrome) */
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 h1, h2, h3 { margin: 0 0 .3em; }
@@ -31,16 +28,12 @@ button { font-family: inherit; cursor: pointer; }
 .phone {
   max-width: 480px;
   margin: 0 auto;
-  padding: 14px 18px 16px;
+  padding: 20px 18px 40px;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100vh;
 }
-/* The active controller fills the remaining height so nothing scrolls. */
-#playScreen { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-#playScreen .card { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
-.brand { text-align: center; font-size: 1.6rem; font-weight: 800; margin-bottom: 10px; flex: none; }
+.brand { text-align: center; font-size: 1.6rem; font-weight: 800; margin-bottom: 12px; }
 .brand small { display: block; font-size: .85rem; color: var(--muted); font-weight: 400; }
 
 .card {
@@ -85,11 +78,32 @@ input[type=text]:focus { outline: none; border-color: var(--pink); }
 }
 .you-chip .av { font-size: 1.6rem; }
 
-.controls { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; flex: 1; min-height: 0; }
-/* Choice grids fill remaining space so big buttons fit without scrolling. */
-.choices-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
-.choices-wrap .choices { flex: 1; min-height: 0; }
-.choice { display: flex; align-items: center; justify-content: center; }
+/* multi-player join rows */
+.name-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.name-row input { flex: 1; }
+.name-rm {
+  flex: none; width: 44px; height: 44px; border-radius: 12px; border: none;
+  background: rgba(255,255,255,.12); color: #fff; font-size: 1.1rem;
+}
+.btn-secondary {
+  width: 100%; border: 2px dashed rgba(255,255,255,.3); background: transparent;
+  color: var(--muted); border-radius: 14px; padding: 12px; font-weight: 700; font-size: 1rem;
+}
+.hint-line { font-size: .85rem; color: var(--muted); margin-top: 8px; text-align: center; }
+
+/* seat bar (pass-and-play) */
+.seat-bar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 12px; }
+.seat-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.1); border: 2px solid transparent; border-radius: 999px;
+  padding: 6px 14px; font-weight: 700; color: var(--ink); font-size: 1rem;
+}
+.seat-chip .av { font-size: 1.3rem; }
+.seat-chip.active { background: rgba(34,197,94,.25); }
+.seat-chip.shown { border-color: var(--yellow); }
+.seat-chip:disabled { opacity: .6; }
+
+.controls { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
 .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .choice {
   padding: 20px 10px; border-radius: 16px; border: none;
@@ -101,6 +115,22 @@ input[type=text]:focus { outline: none; border-color: var(--pink); }
 .ctrl-title { text-align: center; font-size: 1.5rem; }
 .ctrl-sub { text-align: center; color: var(--muted); margin-bottom: 8px; }
 .ctrl-text { text-align: center; font-size: 1.1rem; opacity: .85; }
+
+/* Big prompt (e.g. a math equation to race on) */
+.ctrl-prompt {
+  text-align: center;
+  font-size: clamp(2.6rem, 13vw, 4rem);
+  font-weight: 900; line-height: 1.1;
+  margin: 10px 0 14px; letter-spacing: .02em;
+}
+
+/* Big answer grid — large, easy to tap fast during a race */
+.choices.big { gap: 14px; }
+.choices.big .choice {
+  padding: clamp(26px, 9vw, 48px) 10px;
+  font-size: clamp(2rem, 9vw, 3rem);
+  border-radius: 20px;
+}
 
 .flash-wrong { animation: shake .4s; }
 @keyframes shake {
@@ -118,15 +148,13 @@ input[type=text]:focus { outline: none; border-color: var(--pink); }
   padding: 10px; font-weight: 800;
 }
 
-/* drawing pad — fills leftover height so the controller never scrolls */
-.pad-wrap { background: #fff; border-radius: 16px; overflow: hidden; flex: 1; min-height: 0; }
-canvas.pad { display: block; width: 100%; height: 100%; touch-action: none; background: #fff; }
+/* drawing pad */
+.pad-wrap { background: #fff; border-radius: 16px; overflow: hidden; }
+canvas.pad { display: block; width: 100%; touch-action: none; background: #fff; }
 
 /* ---------- TV ---------- */
 .tv {
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden;
+  min-height: 100vh;
   padding: 3vh 4vw;
   display: flex; flex-direction: column;
 }
@@ -216,10 +244,10 @@ canvas.pad { display: block; width: 100%; height: 100%; touch-action: none; back
 .story-turn { font-size: 2vw; margin-top: 3vh; color: var(--muted); }
 
 /* Draw */
-.draw-stage { flex: 1; min-height: 0; display: grid; grid-template-rows: auto 1fr; gap: 1vh; align-items: center; justify-items: center; }
+.draw-stage { flex: 1; display: grid; grid-template-columns: 1fr; gap: 1vh; align-items: center; justify-items: center; }
 .draw-info { font-size: 2.2vw; text-align: center; }
-.draw-canvas-wrap { background: #fff; border-radius: 18px; box-shadow: 0 10px 40px rgba(0,0,0,.4); min-height: 0; display: flex; }
-canvas#tvDraw { display: block; border-radius: 18px; max-width: 88vw; max-height: 60vh; width: auto; height: auto; }
+.draw-canvas-wrap { background: #fff; border-radius: 18px; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+canvas#tvDraw { display: block; border-radius: 18px; }
 .draw-result { font-size: 3vw; color: var(--yellow); text-align: center; }
 
 /* Math Tug of War */

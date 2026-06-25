@@ -20,8 +20,10 @@
         <input id="code" type="text" class="code-input" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="ABCD" />
       </div>
       <div class="field">
-        <label for="name">Your name</label>
-        <input id="name" type="text" maxlength="14" autocomplete="off" placeholder="e.g. Maya" />
+        <label>Who's playing on this phone?</label>
+        <div id="nameRows"></div>
+        <button id="addPlayer" type="button" class="btn-secondary">＋ Add another player on this phone</button>
+        <div class="hint-line">Sharing one phone? Add everyone here — it'll show whose turn it is.</div>
       </div>
       <button id="joinBtn" class="btn">Let's play! →</button>
       <div id="joinError" class="error"></div>
@@ -29,7 +31,7 @@
 
     <!-- Waiting / in-game controller -->
     <section id="playScreen" class="hide">
-      <div class="you-chip"><span class="av" id="youAv">🦊</span><span id="youName">You</span></div>
+      <div id="seatBar" class="seat-bar"></div>
       <div class="card">
         <div id="ctrlTitle" class="ctrl-title"></div>
         <div id="ctrlSub" class="ctrl-sub"></div>
