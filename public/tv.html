@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Family Arcade — TV</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="tv">
+    <div class="tv-header">
+      <div class="tv-title">🎮 Family Arcade</div>
+      <div class="tv-code-box">
+        <div class="join-row">
+          <img id="qrImg" class="qr hide" alt="Scan to join" />
+          <div>
+            <div class="lbl">Scan, or go to</div>
+            <div class="tv-url" id="joinUrl">…</div>
+            <div class="lbl">room code</div>
+            <div class="tv-code" id="roomCode">····</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lobby + arcade menu -->
+    <div id="lobby" class="lobby-main">
+      <div class="players-panel">
+        <h2>Players</h2>
+        <div id="playerList" class="player-list"></div>
+        <p class="empty-hint" id="emptyHint">Waiting for players to join…</p>
+      </div>
+      <div class="players-panel">
+        <h2>Pick a game!</h2>
+        <div id="gamesGrid" class="games-grid"></div>
+      </div>
+    </div>
+
+    <!-- Active game -->
+    <div id="gameView" class="tv-game hide">
+      <div class="tv-header" style="margin:0 0 1vh">
+        <button class="back-btn" id="backBtn">⬅ Back to Arcade</button>
+        <div class="scorebar" id="scorebar"></div>
+      </div>
+      <div id="gameStage" class="tv-game"></div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/tv.js"></script>
+</body>
+</html>

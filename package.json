@@ -1,0 +1,18 @@
+{
+  "name": "family-arcade",
+  "version": "0.1.0",
+  "description": "A cast-to-TV family game arcade. The TV is the shared screen, phones are the controllers.",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.7.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
