@@ -12,16 +12,13 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-html, body { height: 100%; }
-
 body {
   margin: 0;
   font-family: 'Baloo 2', 'Comic Sans MS', 'Trebuchet MS', system-ui, sans-serif;
   background: radial-gradient(circle at 30% 10%, var(--bg2), var(--bg));
   color: var(--ink);
-  height: 100vh;
-  height: 100dvh; /* fit mobile viewport (accounts for browser chrome) */
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 h1, h2, h3 { margin: 0 0 .3em; }
@@ -31,16 +28,12 @@ button { font-family: inherit; cursor: pointer; }
 .phone {
   max-width: 480px;
   margin: 0 auto;
-  padding: 14px 18px 16px;
+  padding: 20px 18px 40px;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100vh;
 }
-/* The active controller fills the remaining height so nothing scrolls. */
-#playScreen { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-#playScreen .card { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
-.brand { text-align: center; font-size: 1.6rem; font-weight: 800; margin-bottom: 10px; flex: none; }
+.brand { text-align: center; font-size: 1.6rem; font-weight: 800; margin-bottom: 12px; }
 .brand small { display: block; font-size: .85rem; color: var(--muted); font-weight: 400; }
 
 .card {
@@ -85,11 +78,7 @@ input[type=text]:focus { outline: none; border-color: var(--pink); }
 }
 .you-chip .av { font-size: 1.6rem; }
 
-.controls { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; flex: 1; min-height: 0; }
-/* Choice grids fill remaining space so big buttons fit without scrolling. */
-.choices-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
-.choices-wrap .choices { flex: 1; min-height: 0; }
-.choice { display: flex; align-items: center; justify-content: center; }
+.controls { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
 .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .choice {
   padding: 20px 10px; border-radius: 16px; border: none;
@@ -118,15 +107,13 @@ input[type=text]:focus { outline: none; border-color: var(--pink); }
   padding: 10px; font-weight: 800;
 }
 
-/* drawing pad — fills leftover height so the controller never scrolls */
-.pad-wrap { background: #fff; border-radius: 16px; overflow: hidden; flex: 1; min-height: 0; }
-canvas.pad { display: block; width: 100%; height: 100%; touch-action: none; background: #fff; }
+/* drawing pad */
+.pad-wrap { background: #fff; border-radius: 16px; overflow: hidden; }
+canvas.pad { display: block; width: 100%; touch-action: none; background: #fff; }
 
 /* ---------- TV ---------- */
 .tv {
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden;
+  min-height: 100vh;
   padding: 3vh 4vw;
   display: flex; flex-direction: column;
 }
@@ -216,10 +203,10 @@ canvas.pad { display: block; width: 100%; height: 100%; touch-action: none; back
 .story-turn { font-size: 2vw; margin-top: 3vh; color: var(--muted); }
 
 /* Draw */
-.draw-stage { flex: 1; min-height: 0; display: grid; grid-template-rows: auto 1fr; gap: 1vh; align-items: center; justify-items: center; }
+.draw-stage { flex: 1; display: grid; grid-template-columns: 1fr; gap: 1vh; align-items: center; justify-items: center; }
 .draw-info { font-size: 2.2vw; text-align: center; }
-.draw-canvas-wrap { background: #fff; border-radius: 18px; box-shadow: 0 10px 40px rgba(0,0,0,.4); min-height: 0; display: flex; }
-canvas#tvDraw { display: block; border-radius: 18px; max-width: 88vw; max-height: 60vh; width: auto; height: auto; }
+.draw-canvas-wrap { background: #fff; border-radius: 18px; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+canvas#tvDraw { display: block; border-radius: 18px; }
 .draw-result { font-size: 3vw; color: var(--yellow); text-align: center; }
 
 /* Math Tug of War */

@@ -139,7 +139,6 @@ function buildControl(c) {
 
   if (c.type === 'choices') {
     const wrap = document.createElement('div');
-    wrap.className = 'choices-wrap';
     if (c.label) {
       const l = document.createElement('div');
       l.className = 'ctrl-sub';
