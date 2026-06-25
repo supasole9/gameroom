@@ -11,8 +11,29 @@ const ROOM_CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no easily-confused
 const ROOM_CODE_LEN = 4;
 export const MAX_PLAYERS = 6;
 
-// A friendly pool of avatars so each player gets a recognisable token on the TV.
-export const AVATARS = ['🦊', '🐢', '🐸', '🦄', '🐙', '🐝', '🦁', '🐧', '🦖', '🐬', '🐼', '🦉'];
+// A big, friendly pool of avatars to pick from (kids choose their own).
+export const AVATARS = [
+  '🦊', '🐢', '🐸', '🦄', '🐙', '🐝', '🦁', '🐧', '🦖', '🐬', '🐼', '🦉',
+  '🐶', '🐱', '🐵', '🐯', '🐰', '🐨', '🐮', '🐷', '🐥', '🦋', '🐠', '🦈',
+  '🦕', '🦒', '🦓', '🦔', '🦦', '🐲', '🦩', '🦜', '🐳', '🦭', '🦚', '🦦',
+];
+
+export function takenAvatars(room) {
+  return new Set([...room.players.values()].map((p) => p.avatar));
+}
+
+// Change a seat's avatar. Refuses if another player already has that emoji
+// (so tokens stay distinct on the board). Returns true on success.
+export function setAvatar(room, pid, avatar) {
+  if (!AVATARS.includes(avatar)) return false;
+  const p = room.players.get(pid);
+  if (!p) return false;
+  for (const other of room.players.values()) {
+    if (other.id !== pid && other.avatar === avatar) return false;
+  }
+  p.avatar = avatar;
+  return true;
+}
 
 const rooms = new Map();
 
@@ -54,7 +75,7 @@ export function syncPhoneSeats(room, clientId, socketId, seats, allowStructureCh
   const accepted = [];
   let rejected = 0;
 
-  for (const { pid, name } of seats) {
+  for (const { pid, name, avatar: wanted } of seats) {
     let p = room.players.get(pid);
     if (p) {
       p.socketId = socketId;
@@ -63,7 +84,10 @@ export function syncPhoneSeats(room, clientId, socketId, seats, allowStructureCh
     } else {
       if (room.players.size >= MAX_PLAYERS) { rejected++; continue; }
       const used = new Set([...room.players.values()].map((x) => x.avatar));
-      const avatar = AVATARS.find((a) => !used.has(a)) || '🎮';
+      // Honour the player's chosen emoji if it's valid and free; else auto-pick.
+      const avatar = (wanted && AVATARS.includes(wanted) && !used.has(wanted))
+        ? wanted
+        : (AVATARS.find((a) => !used.has(a)) || '🎮');
       p = {
         id: pid, clientId, socketId,
         name: (name || 'Player').slice(0, 14), avatar, connected: true, score: 0,

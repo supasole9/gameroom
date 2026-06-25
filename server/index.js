@@ -9,6 +9,7 @@ import QRCode from 'qrcode';
 import {
   createRoom, getRoom, deleteRoom, syncPhoneSeats, removePlayer, getPlayer,
   getPlayersBySocket, publicPlayers, findRoomBySocket, connectedCount, MAX_PLAYERS,
+  AVATARS, takenAvatars, setAvatar,
 } from './rooms.js';
 import { createContext } from './context.js';
 import { catalogue, getGame } from './games/index.js';
@@ -47,6 +48,17 @@ function sendLobby(room) {
     games: catalogue(),
     phase: room.phase,
   });
+}
+
+// Tell every phone which emojis are currently taken (so pickers can disable them).
+function sendRosterAll(room) {
+  const taken = [...takenAvatars(room)];
+  const seen = new Set();
+  for (const p of room.players.values()) {
+    if (seen.has(p.socketId)) continue;
+    seen.add(p.socketId);
+    io.to(p.socketId).emit('controller:roster', { taken });
+  }
 }
 
 // Notify each distinct phone (socket) once about the lobby/game phase.
@@ -114,6 +126,7 @@ io.on('connection', (socket) => {
     io.to(p.socketId).emit('controller:removed', { pid: id });
     removePlayer(room, id);
     sendLobby(room);
+    sendRosterAll(room);
   });
 
   // ---- Phone / controller ----
@@ -148,8 +161,10 @@ io.on('connection', (socket) => {
     socket.emit('controller:joined', {
       code: room.code,
       seats: accepted.map((p) => ({ pid: p.id, name: p.name, avatar: p.avatar })),
+      palette: AVATARS,
     });
     sendLobby(room);
+    sendRosterAll(room);
     io.to(socket.id).emit('controller:lobby', {
       code: room.code, phase: room.phase, gameName: room.game ? room.game.name : null,
     });
@@ -169,6 +184,28 @@ io.on('connection', (socket) => {
       }
     }
     if (wasReconnect) io.to(room.hostSocketId).emit('tv:toast', { text: `${accepted[0].name} reconnected.` });
+  });
+
+  // A player picks a different emoji.
+  socket.on('player:setAvatar', ({ pid, avatar }) => {
+    const room = findRoomBySocket(socket.id);
+    if (!room) return;
+    const p = getPlayer(room, pid);
+    if (!p || p.socketId !== socket.id) return; // must own this seat
+    if (!setAvatar(room, pid, avatar)) {
+      io.to(socket.id).emit('controller:toast', { text: 'That emoji is taken — pick another!' });
+      sendRosterAll(room);
+      return;
+    }
+    // Reflect the change everywhere: this phone's seats, the TV, and pickers.
+    const mySeats = getPlayersBySocket(room, socket.id)
+      .map((s) => ({ pid: s.id, name: s.name, avatar: s.avatar }));
+    io.to(socket.id).emit('controller:seats', { seats: mySeats });
+    sendLobby(room);
+    sendRosterAll(room);
+    if (room.phase === 'game' && room.game && typeof room.game.sync === 'function') {
+      room.game.sync(createContext(io, room));
+    }
   });
 
   socket.on('player:action', (action) => {

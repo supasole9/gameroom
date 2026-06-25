@@ -18,43 +18,60 @@ const BOARD = [
   { i: 0, type: 'go', name: 'Lāʻie', emoji: '🌺' },
   { i: 1, type: 'prop', name: 'Hukilau Beach', group: 'beaches', color: '#22d3ee', price: 2, rent: 1, emoji: '🏖️' },
   { i: 2, type: 'prop', name: 'Pounders Beach', group: 'beaches', color: '#22d3ee', price: 2, rent: 1, emoji: '🌊' },
-  { i: 3, type: 'chance', name: 'Hukilau Card', emoji: '🃏' },
+  { i: 3, type: 'mystery', deck: 'hukilau', name: 'Hukilau Card', emoji: '🃏' },
   { i: 4, type: 'prop', name: 'Lāʻie Point', group: 'sights', color: '#2dd4bf', price: 3, rent: 1, emoji: '🪨' },
   { i: 5, type: 'prop', name: 'Hukilau Marketplace', group: 'shops', color: '#fb923c', price: 3, rent: 1, emoji: '🛍️' },
   { i: 6, type: 'rest', name: 'Lāʻie Temple', emoji: '🕊️', note: 'Rest & reflect' },
   { i: 7, type: 'prop', name: 'Polynesian Cultural Center', group: 'attractions', color: '#a78bfa', price: 5, rent: 3, emoji: '🪘' },
   { i: 8, type: 'prop', name: 'Gunstock Ranch', group: 'country', color: '#4ade80', price: 4, rent: 2, emoji: '🐎' },
-  { i: 9, type: 'chance', name: 'Hukilau Card', emoji: '🃏' },
+  { i: 9, type: 'mystery', deck: 'talkstory', name: 'Talk-Story Card', emoji: '🎁' },
   { i: 10, type: 'prop', name: 'Mālaekahana Beach', group: 'beaches', color: '#22d3ee', price: 3, rent: 2, emoji: '🏕️' },
   { i: 11, type: 'prop', name: 'Cackle Fresh Egg Farm', group: 'farms', color: '#facc15', price: 3, rent: 1, emoji: '🥚' },
   { i: 12, type: 'rest', name: 'Beach Day!', emoji: '☀️', note: 'Relax — nothing happens' },
   { i: 13, type: 'prop', name: 'Kahuku Sugar Mill', group: 'shops', color: '#fb923c', price: 4, rent: 2, emoji: '🏭' },
   { i: 14, type: 'prop', name: "Giovanni's Shrimp Truck", group: 'shrimp', color: '#f87171', price: 5, rent: 3, emoji: '🍤' },
   { i: 15, type: 'prop', name: "Romy's Kahuku Prawns", group: 'shrimp', color: '#f87171', price: 5, rent: 3, emoji: '🦐' },
-  { i: 16, type: 'chance', name: 'Hukilau Card', emoji: '🃏' },
+  { i: 16, type: 'mystery', deck: 'hukilau', name: 'Hukilau Card', emoji: '🃏' },
   { i: 17, type: 'prop', name: 'Kahuku Farms', group: 'farms', color: '#facc15', price: 4, rent: 2, emoji: '🥭' },
   { i: 18, type: 'loseturn', name: 'Shrimp Truck Line!', emoji: '⏳', note: 'Such a long line — lose a turn' },
   { i: 19, type: 'prop', name: 'Kahuku Golf Course', group: 'country', color: '#4ade80', price: 5, rent: 2, emoji: '⛳' },
   { i: 20, type: 'prop', name: 'Amorient Aquafarm', group: 'farms', color: '#facc15', price: 4, rent: 2, emoji: '🐟' },
-  { i: 21, type: 'chance', name: 'Hukilau Card', emoji: '🃏' },
+  { i: 21, type: 'mystery', deck: 'talkstory', name: 'Talk-Story Card', emoji: '🎁' },
   { i: 22, type: 'prop', name: 'Kahuku Point', group: 'sights', color: '#2dd4bf', price: 5, rent: 2, emoji: '🐢' },
   { i: 23, type: 'prop', name: 'Turtle Bay Resort', group: 'attractions', color: '#a78bfa', price: 6, rent: 3, emoji: '🏨' },
 ];
 
-const CARDS = [
-  { text: 'You caught a wave at Pounders! 🏄 Collect $2', money: 2 },
-  { text: 'Shave ice treat 🍧 — pay $1', money: -1 },
-  { text: 'Won the hukilau! 🐟 The whole town shares the catch — collect $3', money: 3 },
-  { text: 'Flat tire on Kamehameha Highway 🚗 — pay $2', money: -2 },
-  { text: 'Found a honu at Lāʻie Point 🐢 — collect $1', money: 1 },
-  { text: 'PCC lūʻau night 🪘 — you dance for tips! Collect $2', money: 2 },
-  { text: 'Beach cleanup at Hukilau 🧹 — collect $2', money: 2 },
-  { text: 'Plate lunch for the family 🍱 — pay $2', money: -2 },
-  { text: 'Mango season at Kahuku Farms 🥭 — sell a box, collect $2', money: 2 },
-  { text: 'Malasada Friday! 🍩 — pay $1', money: -1 },
-  { text: 'Rainbow over the Koʻolau 🌈 — collect $1', money: 1 },
-  { text: 'Drive back to Lāʻie 🚙 — go to START and collect!', moveTo: 0 },
+// Two decks of mystery cards, à la Monopoly's Chance / Community Chest.
+// Effects: money (+/- from bank), moveTo (advance & resolve), back (& resolve),
+// toJail (the shrimp-truck line), collectEach / payEach (player to player).
+const HUKILAU = [ // adventurous — movement & events
+  { text: 'Drive back to Lāʻie 🚙 — advance to START!', moveTo: 0 },
+  { text: 'Catch a free show at the PCC 🪘 — advance there.', moveTo: 7 },
+  { text: 'Sunset at Turtle Bay 🌅 — advance to Turtle Bay Resort.', moveTo: 23 },
+  { text: "Garlic shrimp craving 🍤 — advance to Giovanni's Shrimp Truck.", moveTo: 14 },
+  { text: 'Took a wrong turn on Kam Hwy 🔄 — go back 3 spaces.', back: 3 },
+  { text: 'Caught in the shrimp truck line! 🍤 Go straight there.', toJail: true },
+  { text: 'You caught a big wave at Pounders! 🏄 Collect $2.', money: 2 },
+  { text: 'Speeding ticket on Kam Highway 🚓 — pay $2.', money: -2 },
+  { text: 'Found a honu at Lāʻie Point 🐢 — collect $1.', money: 1 },
+  { text: 'Shave ice treat 🍧 — pay $1.', money: -1 },
 ];
+const TALKSTORY = [ // community & money
+  { text: 'Won the hukilau! 🐟 The town shares the catch — collect $3.', money: 3 },
+  { text: "It's your birthday! 🎂 Each friend gives you $1.", collectEach: 1 },
+  { text: 'Shave ice for everyone! 🍧 Pay each player $1.', payEach: 1 },
+  { text: 'Helped clean Hukilau Beach 🧹 — collect $2.', money: 2 },
+  { text: 'Found money in your slippahs 🩴 — collect $2.', money: 2 },
+  { text: 'Plate lunch for the family 🍱 — pay $2.', money: -2 },
+  { text: 'Sold mangoes at the farm stand 🥭 — collect $2.', money: 2 },
+  { text: 'Malasada Friday! 🍩 — pay $1.', money: -1 },
+  { text: 'Community lūʻau fundraiser 🎉 — collect $1.', money: 1 },
+  { text: 'Lost your beach towel at the beach 🏖️ — pay $1.', money: -1 },
+];
+const DECKS = {
+  hukilau: { name: 'Hukilau Card', cards: HUKILAU },
+  talkstory: { name: 'Talk-Story Card', cards: TALKSTORY },
+};
 
 function groupMembers(group) { return BOARD.filter((s) => s.group === group).map((s) => s.i); }
 function ownsAllGroup(state, owner, group) {
@@ -148,23 +165,64 @@ function advanceTurn(ctx) {
   renderControllers(ctx);
 }
 
-function applyCard(ctx, cid, card) {
+function others(ctx, cid) { return ctx.players.map((p) => p.id).filter((id) => id !== cid); }
+
+// Draw and apply a mystery card. `depth` guards against move-cards chaining
+// endlessly through other mystery spaces.
+function drawMystery(ctx, cid, deckName, depth) {
   const s = ctx.state;
-  s.card = card.text;
+  const deck = DECKS[deckName];
+  const card = deck.cards[Math.floor(Math.random() * deck.cards.length)];
+  s.card = { title: deck.name, text: card.text, deck: deckName };
+  ctx.narrate(`${deck.name}: ${card.text}`);
+
+  if (typeof card.money === 'number') {
+    if (card.money < 0 && s.cash[cid] < -card.money) {
+      endGame(ctx, `${name(ctx, cid)} couldn't pay the ${deck.name}!`);
+      return;
+    }
+    s.cash[cid] += card.money;
+    s.message = `${name(ctx, cid)}: ${card.text}`;
+    return advanceTurn(ctx);
+  }
+  if (typeof card.collectEach === 'number') {
+    let got = 0;
+    for (const oid of others(ctx, cid)) {
+      const pay = Math.min(card.collectEach, s.cash[oid]); // can't bleed others dry below 0
+      s.cash[oid] -= pay; s.cash[cid] += pay; got += pay;
+    }
+    s.message = `${name(ctx, cid)} collected $${got} from everyone!`;
+    return advanceTurn(ctx);
+  }
+  if (typeof card.payEach === 'number') {
+    const o = others(ctx, cid);
+    const total = card.payEach * o.length;
+    if (s.cash[cid] < total) { endGame(ctx, `${name(ctx, cid)} couldn't treat everyone!`); return; }
+    for (const oid of o) { s.cash[cid] -= card.payEach; s.cash[oid] += card.payEach; }
+    s.message = `${name(ctx, cid)} paid everyone $${card.payEach}.`;
+    return advanceTurn(ctx);
+  }
+  if (card.toJail) {
+    s.positions[cid] = 18; // the shrimp-truck line corner
+    s.loseTurn[cid] = true;
+    s.message = `${name(ctx, cid)} is stuck in the shrimp truck line!`;
+    return advanceTurn(ctx);
+  }
   if (typeof card.moveTo === 'number') {
+    if (card.moveTo <= s.positions[cid]) s.cash[cid] += GO_PAY; // passed START
     s.positions[cid] = card.moveTo;
-    s.cash[cid] += GO_PAY; // arriving back at START collects
-    return `${name(ctx, cid)}: ${card.text}`;
+    if (depth >= 2) return advanceTurn(ctx);
+    return resolveLanding(ctx, cid, depth + 1);
   }
-  // money card
-  if (card.money < 0 && s.cash[cid] < -card.money) {
-    return null; // signals can't pay -> bankruptcy handled by caller
+  if (typeof card.back === 'number') {
+    s.positions[cid] = (s.positions[cid] - card.back + BOARD.length) % BOARD.length;
+    if (depth >= 2) return advanceTurn(ctx);
+    return resolveLanding(ctx, cid, depth + 1);
   }
-  s.cash[cid] += card.money;
-  return `${name(ctx, cid)}: ${card.text}`;
+  return advanceTurn(ctx);
 }
 
-function resolveLanding(ctx, cid) {
+function resolveLanding(ctx, cid, depth = 0) {
   const s = ctx.state;
   const pos = s.positions[cid];
   const space = BOARD[pos];
@@ -184,14 +242,8 @@ function resolveLanding(ctx, cid) {
     ctx.narrate(s.message);
     return advanceTurn(ctx);
   }
-  if (space.type === 'chance') {
-    const card = CARDS[Math.floor(Math.random() * CARDS.length)];
-    const msg = applyCard(ctx, cid, card);
-    if (msg === null) { endGame(ctx, `${name(ctx, cid)} couldn't pay for ${card.text.replace(/ —.*/, '')}!`); return; }
-    s.message = msg;
-    ctx.narrate(card.text);
-    if (typeof card.moveTo === 'number') { return resolveLanding(ctx, cid); } // resolve the new space
-    return advanceTurn(ctx);
+  if (space.type === 'mystery') {
+    return drawMystery(ctx, cid, space.deck, depth);
   }
 
   // property
@@ -231,7 +283,8 @@ function renderControllers(ctx) {
   const curId = currentCid(ctx);
   ctx.renderControllers((p) => {
     const cash = s.cash[p.id] || 0;
-    const myProps = Object.entries(s.owners).filter(([, o]) => o === p.id).map(([i]) => BOARD[i].emoji).join(' ');
+    const myPropNames = Object.entries(s.owners).filter(([, o]) => o === p.id).map(([i]) => BOARD[i].name);
+    const myCount = myPropNames.length;
 
     if (s.phase === 'over') {
       const won = s.winner === p.id;
@@ -256,7 +309,7 @@ function renderControllers(ctx) {
       }
       return {
         title: '🎲 Your turn!',
-        subtitle: `You have $${cash}${myProps ? ' · ' + myProps : ''}`,
+        subtitle: `You have $${cash}${myCount ? ` · ${myCount} ${myCount === 1 ? 'place' : 'places'}` : ''}`,
         controls: [{ type: 'button', id: 'roll', label: '🎲 Roll the dice', big: true, color: '#ff6b6b' }],
       };
     }
@@ -264,7 +317,7 @@ function renderControllers(ctx) {
     return {
       title: `${name(ctx, curId)}'s turn`,
       subtitle: `You have $${cash}`,
-      controls: [{ type: 'text', value: myProps ? `You own: ${myProps}` : 'No properties yet — keep rolling!' }],
+      controls: [{ type: 'text', value: myCount ? `You own: ${myPropNames.join(', ')}` : 'No properties yet — keep rolling!' }],
     };
   });
 }

@@ -327,10 +327,13 @@ function renderLaie(payload) {
       ? `<div class="lc-foot">${ownerAv ? ownerAv : '$' + sp.price}</div>`
       : (sp.note ? `<div class="lc-foot lc-note">${escapeHtml(sp.note)}</div>` : '');
     const toks = (tokensOn[i] || []).map((a) => `<span>${a}</span>`).join('');
-    cells += `<div class="lc ${sp.type}" style="grid-row:${r};grid-column:${c}">
+    // Property cells show no icon (it was confusing next to player tokens);
+    // special spaces (corners, chance) keep their icon to stand out.
+    const emojiHtml = sp.type === 'prop' ? '' : `<div class="lc-emoji">${sp.emoji}</div>`;
+    cells += `<div class="lc ${sp.type} ${sp.deck || ''}" style="grid-row:${r};grid-column:${c}">
       ${band}
-      <div class="lc-emoji">${sp.emoji}</div>
-      <div class="lc-name">${escapeHtml(sp.name)}</div>
+      ${emojiHtml}
+      <div class="lc-name${sp.type === 'prop' ? ' prop-name' : ''}">${escapeHtml(sp.name)}</div>
       ${foot}
       <div class="lc-toks">${toks}</div>
     </div>`;
@@ -352,7 +355,7 @@ function renderLaie(payload) {
   const center = `<div class="lc-center" style="grid-row:2/7;grid-column:2/7">
     <div class="lc-title">🏝️ Lāʻie &amp; Kahuku</div>
     <div class="lc-dice ${payload.animateRoll ? 'rolling' : ''}">${diceFace(s.dice)}</div>
-    ${s.card ? `<div class="lc-card">🃏 ${escapeHtml(s.card)}</div>` : ''}
+    ${s.card ? `<div class="lc-card ${s.card.deck}"><div class="lc-card-title">${s.card.deck === 'talkstory' ? '🎁' : '🃏'} ${escapeHtml(s.card.title)}</div><div class="lc-card-text">${escapeHtml(s.card.text)}</div></div>` : ''}
     <div class="lc-msg">${escapeHtml(s.message || '')}</div>
     <div class="lc-board">${board}</div>
   </div>`;
