@@ -32,6 +32,7 @@ let actingPid = null;             // seat an action will be attributed to
 let palette = [];                 // available emojis to pick from
 let takenSet = new Set();         // emojis already used in the room
 let currentScreen = 'join';       // 'join' | 'lobby' | 'game'
+let padClear = null;              // clears the local drawing pad, if one is shown
 
 // ---------- Join screen: dynamic name rows ----------
 function addNameRow(name = '') {
@@ -246,6 +247,7 @@ function renderView(view, seat) {
   $('ctrlTitle').textContent = (prefix && view.title ? prefix : '') + (view.title || '');
   $('ctrlSub').textContent = view.subtitle || '';
   controlsEl.innerHTML = '';
+  padClear = null; // rebuilt by buildDrawPad if this view has a pad
   for (const c of (view.controls || [])) controlsEl.appendChild(buildControl(c));
 
   if (view.flash === 'wrong') {
@@ -265,7 +267,11 @@ function buildControl(c) {
     b.className = 'btn' + (c.big ? ' big' : '');
     if (c.color) b.style.background = c.color;
     b.textContent = c.label;
-    b.addEventListener('click', () => send(c.id, true));
+    b.addEventListener('click', () => {
+      send(c.id, true);
+      // The Clear button must also wipe the artist's own canvas, not just the TV.
+      if (c.id === 'clear' && padClear) padClear();
+    });
     return b;
   }
   if (c.type === 'text') {
@@ -357,6 +363,7 @@ function buildDrawPad() {
     last = p;
   };
   const end = () => { drawing = false; last = null; };
+  padClear = () => ctx.clearRect(0, 0, canvas.width, canvas.height);
   canvas.addEventListener('mousedown', start);
   canvas.addEventListener('mousemove', move);
   window.addEventListener('mouseup', end);
