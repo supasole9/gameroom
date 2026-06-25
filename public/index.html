@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Family Arcade — Controller</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="phone">
+    <div class="brand">🎮 Family Arcade <small>your phone is the controller</small></div>
+
+    <!-- Join screen -->
+    <section id="joinScreen" class="card">
+      <div class="field">
+        <label for="code">Room code (it's on the TV)</label>
+        <input id="code" type="text" class="code-input" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="ABCD" />
+      </div>
+      <div class="field">
+        <label for="name">Your name</label>
+        <input id="name" type="text" maxlength="14" autocomplete="off" placeholder="e.g. Maya" />
+      </div>
+      <button id="joinBtn" class="btn">Let's play! →</button>
+      <div id="joinError" class="error"></div>
+    </section>
+
+    <!-- Waiting / in-game controller -->
+    <section id="playScreen" class="hide">
+      <div class="you-chip"><span class="av" id="youAv">🦊</span><span id="youName">You</span></div>
+      <div class="card">
+        <div id="ctrlTitle" class="ctrl-title"></div>
+        <div id="ctrlSub" class="ctrl-sub"></div>
+        <div id="controls" class="controls"></div>
+      </div>
+    </section>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/controller.js"></script>
+</body>
+</html>
