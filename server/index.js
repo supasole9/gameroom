@@ -14,7 +14,7 @@ import { createContext } from './context.js';
 import { catalogue, getGame } from './games/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5858;
 const MAX_PLAYERS = 6;
 
 const app = express();

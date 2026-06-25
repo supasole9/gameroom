@@ -22,8 +22,8 @@ npm start
 
 The terminal prints two URLs:
 
-- 📺 **On the TV / computer:** open `http://<your-ip>:3000/tv.html` (cast this browser tab to the TV).
-- 📱 **On each phone:** either **scan the QR code** shown on the TV, or open `http://<your-ip>:3000/` and type the 4-letter room code.
+- 📺 **On the TV / computer:** open `http://<your-ip>:5858/tv.html` (cast this browser tab to the TV).
+- 📱 **On each phone:** either **scan the QR code** shown on the TV, or open `http://<your-ip>:5858/` and type the 4-letter room code.
 
 Everyone must be on the **same Wi-Fi**. Then pick a game on the TV and play!
 
