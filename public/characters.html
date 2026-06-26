@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Family Arcade — Character Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="cm">
+    <div class="cm-head">
+      <div class="brand" style="margin:0">🥊 Character Manager</div>
+      <a class="back-btn" href="/tv.html">📺 Back to TV</a>
+    </div>
+
+    <p class="cm-intro">Add your fighters here, line them up nicely, and they'll show up in Roll the Brawl. Make them face <b>right ➡️</b> — the game flips the other player so they face each other.</p>
+
+    <button id="addBtn" class="btn">➕ Add a character</button>
+
+    <div id="gallery" class="cm-gallery"></div>
+
+    <!-- Editor (hidden until adding/editing) -->
+    <div id="editor" class="cm-editor hide">
+      <div class="cm-editor-title" id="edTitle">New character</div>
+      <div class="editor-canvas-wrap">
+        <canvas id="edCanvas" width="320" height="320"></canvas>
+        <div class="editor-arrow">➡️</div>
+      </div>
+      <label class="editor-file"><input id="edFile" type="file" accept="image/*"> 📁 Choose a photo</label>
+
+      <label class="editor-row">Zoom <input id="edScale" type="range" min="0.1" max="3" step="0.01" value="1"></label>
+      <label class="editor-row">Turn <input id="edRot" type="range" min="-180" max="180" step="1" value="0"></label>
+      <div class="editor-row btns">
+        <button id="edFlip" class="btn-secondary" type="button">↔ Flip</button>
+        <button id="edReset" class="btn-secondary" type="button">↺ Reset</button>
+      </div>
+      <label class="editor-row"><input id="edErase" type="checkbox"> ✨ Erase plain background</label>
+      <label class="editor-row" id="edStrengthRow" style="opacity:.5">Strength <input id="edStrength" type="range" min="0" max="1" step="0.05" value="0.5" disabled></label>
+
+      <label class="editor-row">Name <input id="edName" type="text" maxlength="40" placeholder="e.g. Lava Dragon" class="cm-name"></label>
+
+      <div class="editor-row btns">
+        <button id="edCancel" class="btn-secondary" type="button">Cancel</button>
+        <button id="edSave" class="btn" type="button">💾 Save fighter</button>
+      </div>
+      <div id="edMsg" class="error"></div>
+    </div>
+  </div>
+
+  <script src="/js/characters.js"></script>
+</body>
+</html>

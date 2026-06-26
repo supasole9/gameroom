@@ -3,8 +3,10 @@ import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import os from 'node:os';
+import { writeFileSync, unlinkSync, mkdirSync } from 'node:fs';
 import { Server } from 'socket.io';
 import QRCode from 'qrcode';
+import { characterLibrary } from './lib/characters.js';
 
 import {
   createRoom, getRoom, deleteRoom, syncPhoneSeats, removePlayer, getPlayer,
@@ -21,7 +23,38 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer);
 
+app.use(express.json({ limit: '6mb' }));
 app.use(express.static(join(__dirname, '..', 'public')));
+
+// ---- Character Manager API (saves into public/characters/) ----
+const CHAR_DIR = join(__dirname, '..', 'public', 'characters');
+try { mkdirSync(CHAR_DIR, { recursive: true }); } catch { /* ignore */ }
+const safeFile = (f) => typeof f === 'string' && /^[a-z0-9._-]+$/.test(f) && !f.includes('..');
+const slug = (name) => String(name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+
+app.get('/api/characters', (_req, res) => res.json(characterLibrary()));
+
+app.post('/api/characters', (req, res) => {
+  const { name, dataUrl, replace } = req.body || {};
+  const base = slug(name);
+  if (!base) return res.status(400).json({ error: 'Please give your character a name.' });
+  const m = /^data:image\/(png|jpeg|webp);base64,(.+)$/.exec(dataUrl || '');
+  if (!m) return res.status(400).json({ error: 'No image — choose a photo first.' });
+  const buf = Buffer.from(m[2], 'base64');
+  if (buf.length > 4_000_000) return res.status(400).json({ error: 'Image is too large.' });
+  const file = base + '.png';
+  try { writeFileSync(join(CHAR_DIR, file), buf); } catch { return res.status(500).json({ error: 'Could not save the file.' }); }
+  // Renamed an existing character? remove the old file.
+  if (safeFile(replace) && replace !== file) { try { unlinkSync(join(CHAR_DIR, replace)); } catch { /* gone already */ } }
+  return res.json({ ok: true, file });
+});
+
+app.post('/api/characters/delete', (req, res) => {
+  const { file } = req.body || {};
+  if (!safeFile(file)) return res.status(400).json({ error: 'bad file' });
+  try { unlinkSync(join(CHAR_DIR, file)); } catch { /* already gone */ }
+  return res.json({ ok: true });
+});
 
 // ---- Uploaded character images (kept in memory, served by id) ----
 const uploads = new Map(); // id -> { buf, type }

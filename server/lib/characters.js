@@ -25,6 +25,6 @@ export function characterLibrary() {
     .sort()
     .map((f) => {
       const url = '/characters/' + encodeURIComponent(f);
-      return { token: 'img:' + url, url, name: prettify(f) };
+      return { token: 'img:' + url, url, file: f, name: prettify(f) };
     });
 }
