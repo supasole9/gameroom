@@ -56,6 +56,7 @@ function startSetup(ctx) {
     chars,
     ready,
     world: WORLDS[0],
+    dodgeMode: 'easy', // 'easy' = tap in time | 'tricky' = random mini-games
     maxHearts: MAX_HEARTS,
     lastEvent: null,
     message: 'Choose your fighter and your level!',
@@ -127,15 +128,21 @@ function startDefense(ctx, quality) {
   s.pendingQuality = quality;
   s.defenseToken = ++s.seq;
   s.lastEvent = 'incoming';
-  // Pick a RANDOM dodge challenge so it's never just one tap.
   const hard = quality === 'perfect';
-  s.dodge = {
-    kind: DODGE_KINDS[Math.floor(Math.random() * DODGE_KINDS.length)],
-    ms: hard ? 1900 : 2500,           // tighter window for a perfect hit
-    dir: ['⬅️', '⬆️', '➡️'][Math.floor(Math.random() * 3)],
-    taps: hard ? 6 : 5,
-    speed: hard ? 'hard' : 'easy',
-  };
+  if (s.dodgeMode === 'easy') {
+    // Simple: tap Dodge (or Kick back) in time.
+    s.dodge = { mode: 'easy', ms: hard ? 1300 : 1800 };
+  } else {
+    // Tricky: a RANDOM dodge challenge so it's never just one tap.
+    s.dodge = {
+      mode: 'tricky',
+      kind: DODGE_KINDS[Math.floor(Math.random() * DODGE_KINDS.length)],
+      ms: hard ? 1900 : 2500,         // tighter window for a perfect hit
+      dir: ['⬅️', '⬆️', '➡️'][Math.floor(Math.random() * 3)],
+      taps: hard ? 6 : 5,
+      speed: hard ? 'hard' : 'easy',
+    };
+  }
   s.message = `${name(ctx, s.order[s.turnIndex])} attacks — ${WEAPONS[s.weapon].kickable ? 'kick it back' : 'dodge'}!`;
   render(ctx);
   // Backstop in case the defender's phone never answers.
@@ -152,12 +159,14 @@ function resolveDefense(ctx, response, token) {
   const def = s.order[1 - s.turnIndex];
   const dmg = s.pendingQuality === 'perfect' ? 1 : 0.5;
   const weapon = WEAPONS[s.weapon];
-  const success = response === 'ok'; // the challenge was beaten in time
+  // Success: 'ok' (tricky challenge beaten) or a button press in time ('dodge'/'kickback').
+  const success = response === 'ok' || response === 'dodge' || response === 'kickback';
+  const wantsKickback = weapon.kickable && (response === 'kickback' || response === 'ok');
 
   let ended = false;
-  if (success && weapon.kickable) {
+  if (success && wantsKickback) {
     s.lastEvent = 'kickback';
-    s.message = `${name(ctx, def)} nailed the timing and kicked the dynamite back at ${name(ctx, att)}! 🧨`;
+    s.message = `${name(ctx, def)} kicked the dynamite back at ${name(ctx, att)}! 🧨`;
     ctx.narrate(s.message);
     ended = applyDamage(ctx, att, dmg);
   } else if (success) {
@@ -227,6 +236,7 @@ function renderControllers(ctx) {
           { type: 'choices', id: 'char', label: 'Your character:', selected: myChar, options: charOptions },
           { type: 'upload', id: 'charimg', label: (myChar && String(myChar).startsWith('img:')) ? '📷 Photo set ✓ — change?' : '📷 Upload your own' },
           { type: 'choices', id: 'world', label: 'Level / background:', selected: s.world.id, options: WORLDS.map((w) => ({ id: w.id, label: `${w.emoji} ${w.name}` })) },
+          { type: 'choices', id: 'dodgemode', label: 'Dodge style:', selected: s.dodgeMode, options: [{ id: 'easy', label: '😊 Easy (tap in time)' }, { id: 'tricky', label: '😎 Tricky (mini-games)' }] },
           { type: 'button', id: 'ready', label: myChar ? '✅ Ready!' : '⬆️ Pick a character first', big: true, color: myChar ? '#22c55e' : '#94a3b8' },
         ],
       };
@@ -260,6 +270,16 @@ function renderControllers(ctx) {
     if (s.phase === 'defense') {
       const w = WEAPONS[s.weapon];
       const d = s.dodge;
+      if (d.mode === 'easy') {
+        // Simple: tap the button in time.
+        const buttons = [{ id: 'dodge', label: '🦘 SUPER JUMP!', color: '#22c55e' }];
+        if (w.kickable) buttons.push({ id: 'kickback', label: '🦵 KICK IT BACK!', color: '#ff6b6b' });
+        return {
+          title: '⚡ INCOMING!',
+          subtitle: 'Tap in time!',
+          controls: [{ type: 'reaction', id: 'defend', ms: d.ms, prompt: `${w.emoji} ${qualityWord(s.pendingQuality)} hit coming!`, buttons }],
+        };
+      }
       const verb = w.kickable ? '🦵 Kick it BACK!' : '🦘 DODGE!';
       const promptByKind = {
         timing: 'Tap when the marker is in the GREEN!',
@@ -315,6 +335,8 @@ export default {
       } else if (action.control === 'world') {
         const w = WORLDS.find((x) => x.id === action.value);
         if (w) { s.world = w; render(ctx); }
+      } else if (action.control === 'dodgemode') {
+        if (action.value === 'easy' || action.value === 'tricky') { s.dodgeMode = action.value; render(ctx); }
       } else if (action.control === 'ready') {
         if (s.chars[player.id]) s.ready[player.id] = true;
         if (s.order.every((id) => s.ready[id] && s.chars[id])) beginBattle(ctx);

@@ -458,7 +458,8 @@ function renderBrawl(payload) {
   else if (s.phase === 'aim') center = `<div class="brawl-weapon">${WEAPON_EMOJI[s.weapon] || '🎯'}<div class="bw-name">${capitalize(s.weapon)}</div><div class="bw-sub">aiming…</div></div>`;
   else if (s.phase === 'defense') {
     const kindLbl = { timing: 'Time it!', mash: 'Mash!', aim: 'Jump the right way!', catch: 'Catch it!' };
-    center = `<div class="brawl-incoming">⚡<div>INCOMING!</div><div class="brawl-dodgekind">${s.dodge ? (kindLbl[s.dodge.kind] || '') : ''}</div></div>`;
+    const lbl = s.dodge ? (s.dodge.mode === 'easy' ? 'Tap in time!' : (kindLbl[s.dodge.kind] || '')) : '';
+    center = `<div class="brawl-incoming">⚡<div>INCOMING!</div><div class="brawl-dodgekind">${lbl}</div></div>`;
   }
 
   gameStage.innerHTML = `
