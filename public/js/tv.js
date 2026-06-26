@@ -8,6 +8,16 @@ const gameStage = $('gameStage');
 
 let games = [];
 
+// ---------- Collapsible top header (title + room code/QR) ----------
+const HIDE_KEY = 'arcadeHideHeader';
+function applyHeader(hidden) {
+  $('topHeader').classList.toggle('collapsed', hidden);
+  $('hdrShow').classList.toggle('hide', !hidden);
+}
+applyHeader(localStorage.getItem(HIDE_KEY) === '1');
+$('hdrHide').addEventListener('click', () => { localStorage.setItem(HIDE_KEY, '1'); applyHeader(true); });
+$('hdrShow').addEventListener('click', () => { localStorage.setItem(HIDE_KEY, '0'); applyHeader(false); });
+
 // On load, this screen becomes the host/TV. We pass our own origin so the
 // server can build a QR code that points exactly where we're served from.
 socket.on('connect', () => socket.emit('host:create', { origin: location.origin }));
@@ -446,7 +456,11 @@ function renderBrawl(payload) {
   let center = '';
   if (s.phase === 'roll') center = `<div class="brawl-dice ${payload.animateRoll ? 'rolling' : ''}">${diceFace(s.dice)}</div>`;
   else if (s.phase === 'aim') center = `<div class="brawl-weapon">${WEAPON_EMOJI[s.weapon] || '🎯'}<div class="bw-name">${capitalize(s.weapon)}</div><div class="bw-sub">aiming…</div></div>`;
-  else if (s.phase === 'defense') center = `<div class="brawl-incoming">⚡<div>INCOMING!</div></div>`;
+  else if (s.phase === 'defense') {
+    const kindLbl = { timing: 'Time it!', mash: 'Mash!', aim: 'Jump the right way!', catch: 'Catch it!' };
+    const lbl = s.dodge ? (s.dodge.mode === 'easy' ? 'Tap in time!' : (kindLbl[s.dodge.kind] || '')) : '';
+    center = `<div class="brawl-incoming">⚡<div>INCOMING!</div><div class="brawl-dodgekind">${lbl}</div></div>`;
+  }
 
   gameStage.innerHTML = `
     <div class="brawl-stage world-${s.world.id}">

@@ -183,6 +183,13 @@ input[type=text]:focus { outline: none; border-color: var(--pink); }
 .reaction-prompt { text-align: center; font-size: 1.8rem; font-weight: 900; color: var(--yellow); }
 .reaction-bar { height: 16px; border-radius: 999px; background: rgba(255,255,255,.15); overflow: hidden; }
 .reaction-fill { height: 100%; width: 100%; background: var(--red); }
+.challenge-body { margin-top: 4px; }
+.catch-box { position: relative; height: 190px; background: rgba(255,255,255,.08); border-radius: 14px; overflow: hidden; }
+.catch-target {
+  position: absolute; width: 58px; height: 58px; border-radius: 50%; border: none;
+  background: var(--yellow); font-size: 1.9rem; transform: translate(-50%, -50%);
+  box-shadow: 0 4px 10px rgba(0,0,0,.35);
+}
 
 /* Character Manager page */
 .cm { max-width: 880px; margin: 0 auto; padding: 20px 18px 60px; }
@@ -233,6 +240,19 @@ canvas.pad { display: block; width: 100%; touch-action: none; background: #fff; 
   display: flex; flex-direction: column;
 }
 .tv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2vh; }
+#topHeader.collapsed { display: none; }
+.hdr-mini {
+  background: rgba(255,255,255,.15); color: #fff; border: none; border-radius: 10px;
+  padding: .4vw 1vw; font-size: 1vw; font-weight: 700; margin-left: 1vw; cursor: pointer; vertical-align: middle;
+}
+.hdr-mini:hover { background: rgba(255,255,255,.28); }
+.hdr-toggle {
+  position: fixed; top: 1.4vh; right: 1.4vw; z-index: 40;
+  width: 3.4vw; height: 3.4vw; min-width: 38px; min-height: 38px;
+  border-radius: 50%; border: none; background: rgba(124,92,255,.85); color: #fff;
+  font-size: 1.6vw; font-weight: 800; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.4);
+}
+.hdr-toggle:hover { background: var(--purple); }
 .tv-title { font-size: 3vw; font-weight: 800; }
 .tv-code-box { text-align: right; }
 .tv-code-box .lbl { font-size: 1.3vw; color: var(--muted); }
@@ -452,6 +472,7 @@ canvas#tvDraw { display: block; border-radius: 18px; }
 .brawl-weapon .bw-name { font-size: 2vw; font-weight: 900; }
 .brawl-weapon .bw-sub { font-size: 1.3vw; opacity: .85; }
 .brawl-incoming { text-align: center; font-size: 4vw; font-weight: 900; color: #fff; animation: cardpop .3s ease; }
+.brawl-dodgekind { font-size: 1.6vw; color: var(--yellow); margin-top: .5vh; }
 .brawl-msg { position: absolute; bottom: 1.5vh; font-size: 1.6vw; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.6); text-align: center; max-width: 90%; }
 
 .brawl-over { display: flex; gap: 8vw; align-items: center; justify-content: center; flex: 1; }
