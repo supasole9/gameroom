@@ -23,6 +23,27 @@ const io = new Server(httpServer);
 
 app.use(express.static(join(__dirname, '..', 'public')));
 
+// ---- Uploaded character images (kept in memory, served by id) ----
+const uploads = new Map(); // id -> { buf, type }
+let uploadSeq = 0;
+const MAX_UPLOADS = 60;
+app.get('/uploads/:id', (req, res) => {
+  const u = uploads.get(req.params.id);
+  if (!u) return res.sendStatus(404);
+  res.setHeader('Content-Type', u.type);
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  return res.end(u.buf);
+});
+function storeUpload(dataUrl) {
+  const m = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/.exec(dataUrl || '');
+  if (!m) return null;
+  const id = 'u' + (++uploadSeq);
+  uploads.set(id, { buf: Buffer.from(m[2], 'base64'), type: m[1] });
+  // Keep memory bounded — drop the oldest uploads.
+  while (uploads.size > MAX_UPLOADS) uploads.delete(uploads.keys().next().value);
+  return `/uploads/${id}`;
+}
+
 // The LAN address phones should use, computed once at startup. The TV can
 // override this with its own origin (what it's actually being served from).
 function lanBase() {
@@ -204,6 +225,27 @@ io.on('connection', (socket) => {
     sendLobby(room);
     sendRosterAll(room);
     if (room.phase === 'game' && room.game && typeof room.game.sync === 'function') {
+      room.game.sync(createContext(io, room));
+    }
+  });
+
+  // A player uploads a custom character image (from the in-app editor).
+  socket.on('player:setCharacterImage', ({ pid, dataUrl }) => {
+    const room = findRoomBySocket(socket.id);
+    if (!room) return;
+    const p = getPlayer(room, pid);
+    if (!p || p.socketId !== socket.id) return; // must own this seat
+    if (typeof dataUrl !== 'string' || dataUrl.length > 800000) {
+      io.to(socket.id).emit('controller:toast', { text: 'That image is too big — try a smaller photo.' });
+      return;
+    }
+    const path = storeUpload(dataUrl);
+    if (!path) return;
+    const token = 'img:' + path;
+    io.to(socket.id).emit('controller:characterImage', { pid, token });
+    // If a brawl is choosing characters, use it as this player's fighter.
+    if (room.game && room.game.id === 'brawl' && room.state && room.state.chars) {
+      room.state.chars[pid] = token;
       room.game.sync(createContext(io, room));
     }
   });

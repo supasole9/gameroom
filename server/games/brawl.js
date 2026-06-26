@@ -210,6 +210,7 @@ function renderControllers(ctx) {
         subtitle: `Level: ${s.world.emoji} ${s.world.name}`,
         controls: [
           { type: 'choices', id: 'char', label: 'Your character:', selected: myChar, options: ROSTER.map((e) => ({ id: e, label: e, disabled: s.chars[other] === e })) },
+          { type: 'upload', id: 'charimg', label: (myChar && String(myChar).startsWith('img:')) ? '📷 Photo set ✓ — change?' : '📷 Upload your own' },
           { type: 'choices', id: 'world', label: 'Level / background:', selected: s.world.id, options: WORLDS.map((w) => ({ id: w.id, label: `${w.emoji} ${w.name}` })) },
           { type: 'button', id: 'ready', label: myChar ? '✅ Ready!' : '⬆️ Pick a character first', big: true, color: myChar ? '#22c55e' : '#94a3b8' },
         ],

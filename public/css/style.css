@@ -181,6 +181,24 @@ input[type=text]:focus { outline: none; border-color: var(--pink); }
 .reaction-bar { height: 16px; border-radius: 999px; background: rgba(255,255,255,.15); overflow: hidden; }
 .reaction-fill { height: 100%; width: 100%; background: var(--red); }
 
+/* Character image editor (overlay) */
+.editor-overlay {
+  position: fixed; inset: 0; z-index: 50; background: rgba(10,6,26,.92);
+  display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 16px;
+}
+.editor { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 10px; }
+.editor-title { text-align: center; font-size: 1.5rem; font-weight: 800; }
+.editor-hint { text-align: center; color: var(--muted); font-size: .9rem; }
+.editor-canvas-wrap { position: relative; align-self: center; }
+#edCanvas { width: 256px; max-width: 78vw; height: auto; aspect-ratio: 1; background: #2a1a55; border-radius: 16px; border: 2px solid rgba(255,255,255,.2); touch-action: none; }
+.editor-arrow { position: absolute; right: -6px; top: 50%; transform: translateY(-50%); font-size: 1.6rem; opacity: .8; }
+.editor-file { display: block; text-align: center; background: rgba(255,255,255,.1); border-radius: 12px; padding: 10px; font-weight: 700; }
+.editor-file input { display: block; margin: 6px auto 0; }
+.editor-row { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--muted); }
+.editor-row input[type=range] { flex: 1; }
+.editor-row.btns { gap: 8px; }
+.editor-row.btns .btn-secondary, .editor-row.btns .btn { flex: 1; margin: 0; }
+
 /* drawing pad */
 .pad-wrap { background: #fff; border-radius: 16px; overflow: hidden; }
 canvas.pad { display: block; width: 100%; touch-action: none; background: #fff; }

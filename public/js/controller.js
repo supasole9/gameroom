@@ -334,7 +334,108 @@ function buildControl(c) {
   if (c.type === 'timing') return buildTiming(c);
   if (c.type === 'flick') return buildFlick(c);
   if (c.type === 'reaction') return buildReaction(c);
+  if (c.type === 'upload') return buildUpload(c);
   return document.createElement('div');
+}
+
+// ---------- Character image upload + editor ----------
+function buildUpload(c) {
+  const b = document.createElement('button');
+  b.className = 'btn';
+  b.style.background = c.color || '#7c5cff';
+  b.textContent = c.label || '📷 Upload your own';
+  b.addEventListener('click', () => openImageEditor(actingPid));
+  return b;
+}
+
+function openImageEditor(pid) {
+  const ov = document.createElement('div');
+  ov.className = 'editor-overlay';
+  ov.innerHTML = `
+    <div class="editor">
+      <div class="editor-title">Make your fighter 🥊</div>
+      <div class="editor-hint">Aim them facing the ➡️ side. We flip the other player so you face each other.</div>
+      <div class="editor-canvas-wrap">
+        <canvas id="edCanvas" width="256" height="256"></canvas>
+        <div class="editor-arrow">➡️</div>
+      </div>
+      <label class="editor-file"><input id="edFile" type="file" accept="image/*"> 📁 Choose a photo</label>
+      <label class="editor-row">Size <input id="edScale" type="range" min="0.1" max="3" step="0.01" value="1"></label>
+      <div class="editor-row btns">
+        <button id="edRotL" class="btn-secondary" type="button">⟲ Turn</button>
+        <button id="edRotR" class="btn-secondary" type="button">Turn ⟳</button>
+        <button id="edFlip" class="btn-secondary" type="button">↔ Flip</button>
+      </div>
+      <div class="editor-row btns">
+        <button id="edCancel" class="btn-secondary" type="button">Cancel</button>
+        <button id="edUse" class="btn" type="button">Use this fighter ✅</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+
+  const canvas = ov.querySelector('#edCanvas');
+  const ctx = canvas.getContext('2d');
+  let img = null, scale = 1, rot = 0, flip = 1, ox = 0, oy = 0;
+  function draw() {
+    ctx.clearRect(0, 0, 256, 256);
+    // checker-ish backdrop so a transparent png is visible while editing
+    ctx.fillStyle = 'rgba(255,255,255,.06)';
+    ctx.fillRect(0, 0, 256, 256);
+    if (!img) return;
+    ctx.save();
+    ctx.translate(128 + ox, 128 + oy);
+    ctx.rotate(rot);
+    ctx.scale(scale * flip, scale);
+    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+    ctx.restore();
+  }
+  draw();
+
+  ov.querySelector('#edFile').addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      const im = new Image();
+      im.onload = () => {
+        img = im;
+        scale = Math.min(220 / im.width, 220 / im.height) || 1;
+        rot = 0; flip = 1; ox = 0; oy = 0;
+        ov.querySelector('#edScale').value = String(scale);
+        draw();
+      };
+      im.src = r.result;
+    };
+    r.readAsDataURL(f);
+  });
+  ov.querySelector('#edScale').addEventListener('input', (e) => { scale = parseFloat(e.target.value); draw(); });
+  ov.querySelector('#edRotL').addEventListener('click', () => { rot -= Math.PI / 12; draw(); });
+  ov.querySelector('#edRotR').addEventListener('click', () => { rot += Math.PI / 12; draw(); });
+  ov.querySelector('#edFlip').addEventListener('click', () => { flip *= -1; draw(); });
+
+  let dragging = false, lx = 0, ly = 0;
+  const pt = (e) => { const t = e.touches ? e.touches[0] : e; const r = canvas.getBoundingClientRect(); return { x: (t.clientX - r.left) * (256 / r.width), y: (t.clientY - r.top) * (256 / r.height) }; };
+  const down = (e) => { dragging = true; const p = pt(e); lx = p.x; ly = p.y; };
+  const moveH = (e) => { if (!dragging) return; const p = pt(e); ox += p.x - lx; oy += p.y - ly; lx = p.x; ly = p.y; draw(); if (e.cancelable) e.preventDefault(); };
+  const up = () => { dragging = false; };
+  canvas.addEventListener('mousedown', down);
+  window.addEventListener('mousemove', moveH);
+  window.addEventListener('mouseup', up);
+  canvas.addEventListener('touchstart', (e) => { down(e); e.preventDefault(); }, { passive: false });
+  canvas.addEventListener('touchmove', moveH, { passive: false });
+  canvas.addEventListener('touchend', up);
+
+  function close() {
+    window.removeEventListener('mousemove', moveH);
+    window.removeEventListener('mouseup', up);
+    ov.remove();
+  }
+  ov.querySelector('#edCancel').addEventListener('click', close);
+  ov.querySelector('#edUse').addEventListener('click', () => {
+    if (img) socket.emit('player:setCharacterImage', { pid, dataUrl: canvas.toDataURL('image/png') });
+    close();
+  });
+  cleanups.push(close);
 }
 
 // ---------- Reusable mini-game widgets ----------

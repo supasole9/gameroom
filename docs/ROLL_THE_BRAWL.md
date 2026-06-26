@@ -56,9 +56,14 @@ These are built as shared pieces, not Brawl-only:
 
 ## Build plan (staged)
 
-1. Duel skeleton: 2 players, turn order, hearts (half-heart) UI, win/lose + trash bin.
-2. One weapon end-to-end (roll → aim mini-game → hit resolution → damage).
-3. Remaining weapons + their mini-games and special powers.
-4. Secret moves (super jump dodge, dynamite kick-back) with reaction windows.
-5. Worlds / backgrounds.
-6. Character upload + editor (rotate/shrink/flip) + auto-mirror.
+1. ✅ Duel skeleton: 2 players, turn order, hearts (half-heart) UI, win/lose + trash bin.
+2. ✅ One weapon end-to-end (roll → aim mini-game → hit resolution → damage).
+3. ✅ All weapons + their mini-games (sword/axe timing, bow flick, dynamite).
+4. ✅ Secret moves (super jump dodge, dynamite kick-back) with reaction windows.
+5. ✅ Worlds / backgrounds (+ player picks the level in setup).
+6. ✅ Character select (emoji roster) + image upload/editor (rotate/shrink/flip) with auto-mirror.
+
+### Still to tune (needs the kids' paper answers)
+- Per-weapon difficulty / special powers; which weapon is strongest/easiest.
+- World twists (currently cosmetic backgrounds only).
+- Celebration text on perfect hit / miss / dodge / trash-bin.
