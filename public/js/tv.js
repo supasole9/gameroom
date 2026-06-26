@@ -58,7 +58,7 @@ function renderPlayers(players, target) {
     tok.dataset.id = p.id;
     const status = p.connected ? '' : '<span class="off-tag">offline</span>';
     tok.innerHTML = `<button class="rm" title="Remove player">✕</button>
-      <span class="av">${p.avatar}</span><span class="nm">${escapeHtml(p.name)}</span>${status}`;
+      <span class="av">${avatarHTML(p.avatar)}</span><span class="nm">${escapeHtml(p.name)}</span>${status}`;
     tok.querySelector('.rm').addEventListener('click', () => {
       socket.emit('host:removePlayer', { clientId: p.id });
     });
@@ -106,7 +106,7 @@ function renderScorebar(players, payload) {
   for (const p of players || []) {
     const tok = document.createElement('div');
     tok.className = 'player-tok' + (p.id === activeId ? ' active-turn' : '');
-    tok.innerHTML = `<span class="av">${p.avatar}</span><span class="nm">${escapeHtml(p.name)}</span><span class="sc">${p.score}⭐</span>`;
+    tok.innerHTML = `<span class="av">${avatarHTML(p.avatar)}</span><span class="nm">${escapeHtml(p.name)}</span><span class="sc">${p.score}⭐</span>`;
     bar.appendChild(tok);
   }
 }
@@ -138,7 +138,7 @@ function renderSnakes(payload) {
     let icon = '';
     if (s.ladders[n]) { cls += ' ladder'; icon = '🪜'; }
     if (s.snakes[n]) { cls += ' snake'; icon = '🐍'; }
-    const toks = (byPos[n] || []).map((a) => `<span>${a}</span>`).join('');
+    const toks = (byPos[n] || []).map((a) => `<span>${avatarHTML(a)}</span>`).join('');
     cells += `<div class="${cls}" style="grid-row:${gridRow};grid-column:${col + 1}">
       ${n}${icon ? `<span class="cell-icon">${icon}</span>` : ''}
       <div class="toks">${toks}</div></div>`;
@@ -200,7 +200,7 @@ function renderStory(payload) {
     <div class="story-stage">
       <div class="story-title">📖 ${escapeHtml(s.title)}</div>
       <div class="story-text">${html}</div>
-      <div class="story-turn">${turnP ? `${turnP.avatar} ${escapeHtml(turnP.name)}, check your phone!` : ''}</div>
+      <div class="story-turn">${turnP ? `${avatarHTML(turnP.avatar)} ${escapeHtml(turnP.name)}, check your phone!` : ''}</div>
     </div>`;
 }
 
@@ -224,7 +224,7 @@ function renderDraw(payload) {
 
   gameStage.innerHTML = `
     <div class="draw-stage">
-      <div class="draw-info">✏️ ${drawer ? `${drawer.avatar} ${escapeHtml(drawer.name)}` : 'Someone'} is drawing… &nbsp;Round ${s.round}</div>
+      <div class="draw-info">✏️ ${drawer ? `${avatarHTML(drawer.avatar)} ${escapeHtml(drawer.name)}` : 'Someone'} is drawing… &nbsp;Round ${s.round}</div>
       <div class="draw-canvas-wrap"><canvas id="tvDraw" width="800" height="560"></canvas></div>
     </div>`;
   const canvas = $('tvDraw');
@@ -261,7 +261,7 @@ function renderMathTug(payload) {
     const card = (cid, p) => {
       const d = s.difficulty[cid];
       return `<div class="tug-pick">
-        <div class="av" style="font-size:5vw">${p.avatar}</div>
+        <div class="av" style="font-size:5vw">${avatarHTML(p.avatar)}</div>
         <div style="font-size:2vw;font-weight:800">${escapeHtml(p.name)}</div>
         <div style="font-size:1.6vw;color:${d ? 'var(--green)' : 'var(--muted)'}">${d ? DIFF_LABEL[d] + ' ✓' : 'choosing…'}</div>
       </div>`;
@@ -281,13 +281,13 @@ function renderMathTug(payload) {
     <div class="tug-stage">
       <div class="tug-header">
         <div class="tug-side left">
-          <span class="av">${A.avatar}</span>
+          <span class="av">${avatarHTML(A.avatar)}</span>
           <span class="nm">${escapeHtml(A.name)}</span>
           <span class="meta">${DIFF_LABEL[s.difficulty[s.competitors[0]]] || ''} · ${s.pulls[s.competitors[0]] || 0} pulls</span>
         </div>
         <div class="tug-vs">⬅️ TUG ➡️</div>
         <div class="tug-side right">
-          <span class="av">${B.avatar}</span>
+          <span class="av">${avatarHTML(B.avatar)}</span>
           <span class="nm">${escapeHtml(B.name)}</span>
           <span class="meta">${DIFF_LABEL[s.difficulty[s.competitors[1]]] || ''} · ${s.pulls[s.competitors[1]] || 0} pulls</span>
         </div>
@@ -335,9 +335,9 @@ function renderLaie(payload) {
     const ownerAv = owner ? find(owner).avatar : '';
     const band = sp.color ? `<div class="lc-band" style="background:${sp.color}"></div>` : '';
     const foot = sp.type === 'prop'
-      ? `<div class="lc-foot">${ownerAv ? ownerAv : '$' + sp.price}</div>`
+      ? `<div class="lc-foot">${ownerAv ? avatarHTML(ownerAv) : '$' + sp.price}</div>`
       : (sp.note ? `<div class="lc-foot lc-note">${escapeHtml(sp.note)}</div>` : '');
-    const toks = (tokensOn[i] || []).map((a) => `<span>${a}</span>`).join('');
+    const toks = (tokensOn[i] || []).map((a) => `<span>${avatarHTML(a)}</span>`).join('');
     // Property cells show no icon (it was confusing next to player tokens);
     // special spaces (corners, chance) keep their icon to stand out.
     const emojiHtml = sp.type === 'prop' ? '' : `<div class="lc-emoji">${sp.emoji}</div>`;
@@ -357,7 +357,7 @@ function renderLaie(payload) {
     const isCur = e.cid === curId && s.phase !== 'over';
     const isWin = s.winner === e.cid;
     return `<div class="lb-row ${isCur ? 'lb-cur' : ''} ${isWin ? 'lb-win' : ''}">
-      <span class="lb-av">${p.avatar}</span>
+      <span class="lb-av">${avatarHTML(p.avatar)}</span>
       <span class="lb-nm">${escapeHtml(p.name)}</span>
       <span class="lb-cash">$${e.cash}</span>
     </div>`;
@@ -373,6 +373,13 @@ function renderLaie(payload) {
 
   gameStage.innerHTML = `<div class="laie-board">${cells}${center}</div>`;
   if (s.winner) confettiBurst();
+}
+
+// An avatar is an emoji, or an uploaded character image token "img:<url>".
+// Renders at 1em so it matches the surrounding font-size wherever it's used.
+function avatarHTML(av) {
+  if (typeof av === 'string' && av.startsWith('img:')) return `<img class="avatar-img" src="${av.slice(4)}" alt="">`;
+  return av || '🎮';
 }
 
 // ---------- Reusable half-heart life bar ----------
