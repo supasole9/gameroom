@@ -16,6 +16,8 @@ hearts to win!
   - Minor / small hit = **½ heart**
   - Perfect hit = **1 heart**
   - (3 perfect hits, or 6 small hits, to win.)
+- **Dice (6 faces):** 1 Sword · 2 Axe · 3 Bow · 4 Dynamite · 5 Wild (random weapon)
+  · 6 **+1 Heart** (recharge, capped at 3; if already full you get a random weapon instead).
 - **Weapons (4):** sword, axe, dynamite, bow & arrow. Each is **different** —
   its own aiming mini-game + a special power. (Same damage scale above.)
 - **Aiming mini-games:** quick skill games like *tap when it's green* or
@@ -41,6 +43,16 @@ hearts to win!
 - **First turn:** player 1 always, random, or coin flip?
 - **Celebrations:** what does the TV do/say on a win? the trash-bin toss? what
   does it say on a perfect hit / miss / dodge?
+
+## Reusable foundations (built for other games too)
+
+These are built as shared pieces, not Brawl-only:
+- **Mini-game widgets** (controller protocol): `timing` (tap-when-green),
+  `flick` (swipe), and `reaction` (time-limited dodge/choice). Any game can use
+  them — they grade to a result the game reads.
+- **Half-heart life bar** (`renderHearts`) on the TV — any game with lives.
+- **Dice** helper (`server/lib/dice.js`).
+- **Themed backgrounds** on the TV stage (worlds).
 
 ## Build plan (staged)
 

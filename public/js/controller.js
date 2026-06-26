@@ -33,6 +33,8 @@ let palette = [];                 // available emojis to pick from
 let takenSet = new Set();         // emojis already used in the room
 let currentScreen = 'join';       // 'join' | 'lobby' | 'game'
 let padClear = null;              // clears the local drawing pad, if one is shown
+let cleanups = [];               // teardown for active widgets (timers/animation frames)
+function runCleanups() { cleanups.forEach((fn) => { try { fn(); } catch (e) { /* ignore */ } }); cleanups = []; }
 
 // ---------- Join screen: dynamic name rows ----------
 function addNameRow(name = '') {
@@ -149,6 +151,7 @@ function renderLobby() {
   renderSeatBar(new Set());
   $('ctrlTitle').textContent = "You're in! 🎉";
   $('ctrlSub').textContent = 'Tap to pick your emoji, then watch the TV…';
+  runCleanups();
   controlsEl.innerHTML = '';
   for (const seat of mySeats) {
     const block = document.createElement('div');
@@ -246,6 +249,7 @@ function renderView(view, seat) {
   const prefix = mySeats.length > 1 ? `${seat.avatar} ${seat.name} — ` : '';
   $('ctrlTitle').textContent = (prefix && view.title ? prefix : '') + (view.title || '');
   $('ctrlSub').textContent = view.subtitle || '';
+  runCleanups();
   controlsEl.innerHTML = '';
   padClear = null; // rebuilt by buildDrawPad if this view has a pad
   for (const c of (view.controls || [])) controlsEl.appendChild(buildControl(c));
@@ -326,7 +330,124 @@ function buildControl(c) {
     return wrap;
   }
   if (c.type === 'draw') return buildDrawPad();
+  if (c.type === 'timing') return buildTiming(c);
+  if (c.type === 'flick') return buildFlick(c);
+  if (c.type === 'reaction') return buildReaction(c);
   return document.createElement('div');
+}
+
+// ---------- Reusable mini-game widgets ----------
+// Tap-when-it's-green timing bar. Grades to 'perfect' | 'minor' | 'miss'.
+function buildTiming(c) {
+  const wrap = document.createElement('div');
+  wrap.className = 'mini';
+  const hint = document.createElement('div');
+  hint.className = 'mini-hint';
+  hint.textContent = c.label || "Tap when the marker is in the GREEN — middle is PERFECT!";
+  const track = document.createElement('div');
+  track.className = 'timing-track';
+  track.innerHTML = '<div class="timing-green"></div><div class="timing-perfect"></div><div class="timing-marker"></div>';
+  const marker = track.querySelector('.timing-marker');
+  const btn = document.createElement('button');
+  btn.className = 'btn big';
+  btn.style.background = c.color || '#ff6b6b';
+  btn.textContent = 'TAP!';
+  wrap.append(hint, track, btn);
+
+  const dur = c.speed === 'hard' ? 900 : 1500;
+  let raf, startT = null, done = false;
+  const setPos = (p) => { marker.style.left = (p * 100) + '%'; };
+  function frame(t) {
+    if (startT === null) startT = t;
+    let p = (t - startT) / dur;
+    if (p >= 1) { setPos(1); return finish('miss'); }
+    setPos(p);
+    raf = requestAnimationFrame(frame);
+  }
+  function grade() {
+    const p = parseFloat(marker.style.left) || 0;
+    const dist = Math.abs(p - 50);
+    if (dist <= 7) return 'perfect';
+    if (dist <= 22) return 'minor';
+    return 'miss';
+  }
+  function finish(forced) {
+    if (done) return;
+    done = true;
+    cancelAnimationFrame(raf);
+    btn.disabled = true;
+    send(c.id, forced || grade());
+  }
+  btn.addEventListener('click', () => finish());
+  raf = requestAnimationFrame(frame);
+  cleanups.push(() => { done = true; cancelAnimationFrame(raf); });
+  return wrap;
+}
+
+// Flick/swipe up. Grades by distance + speed to 'perfect' | 'minor' | 'miss'.
+function buildFlick(c) {
+  const wrap = document.createElement('div');
+  wrap.className = 'mini';
+  const hint = document.createElement('div');
+  hint.className = 'mini-hint';
+  hint.textContent = c.label || 'FLICK UP fast to shoot! 🏹';
+  const pad = document.createElement('div');
+  pad.className = 'flick-pad';
+  pad.textContent = '⬆️';
+  wrap.append(hint, pad);
+
+  let startY = null, startT = 0, done = false;
+  const begin = (e) => { const t = e.touches ? e.touches[0] : e; startY = t.clientY; startT = performance.now(); e.preventDefault(); };
+  const finishGesture = (e) => {
+    if (done || startY === null) return;
+    const t = e.changedTouches ? e.changedTouches[0] : e;
+    const dy = startY - t.clientY;            // up is positive
+    const speed = dy / Math.max(performance.now() - startT, 1);
+    let q = 'miss';
+    if (dy > 40) q = speed > 0.9 ? 'perfect' : 'minor';
+    finish(q);
+  };
+  function finish(q) { if (done) return; done = true; pad.textContent = q === 'miss' ? '❌' : '💥'; send(c.id, q); }
+  pad.addEventListener('mousedown', begin);
+  window.addEventListener('mouseup', finishGesture);
+  pad.addEventListener('touchstart', begin, { passive: false });
+  pad.addEventListener('touchend', finishGesture);
+  const timer = setTimeout(() => finish('miss'), 2600);
+  cleanups.push(() => { done = true; clearTimeout(timer); window.removeEventListener('mouseup', finishGesture); });
+  return wrap;
+}
+
+// Time-limited reaction: pick a button before the bar empties, else 'toolate'.
+function buildReaction(c) {
+  const wrap = document.createElement('div');
+  wrap.className = 'mini reaction';
+  const prompt = document.createElement('div');
+  prompt.className = 'reaction-prompt';
+  prompt.textContent = c.prompt || 'INCOMING! ⚡';
+  const barWrap = document.createElement('div');
+  barWrap.className = 'reaction-bar';
+  const bar = document.createElement('div');
+  bar.className = 'reaction-fill';
+  barWrap.appendChild(bar);
+  const btns = document.createElement('div');
+  btns.className = 'controls';
+  wrap.append(prompt, barWrap, btns);
+
+  let done = false;
+  function finish(val) { if (done) return; done = true; clearTimeout(timer); send(c.id, val); }
+  for (const b of (c.buttons || [])) {
+    const el = document.createElement('button');
+    el.className = 'btn big';
+    el.style.background = b.color || '#22c55e';
+    el.textContent = b.label;
+    el.addEventListener('click', () => finish(b.id));
+    btns.appendChild(el);
+  }
+  const ms = c.ms || 1600;
+  requestAnimationFrame(() => { bar.style.transition = `width ${ms}ms linear`; bar.style.width = '0%'; });
+  const timer = setTimeout(() => finish('toolate'), ms);
+  cleanups.push(() => { done = true; clearTimeout(timer); });
+  return wrap;
 }
 
 // ---------- Drawing pad ----------
