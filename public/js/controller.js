@@ -302,9 +302,10 @@ function buildControl(c) {
     grid.className = 'choices' + (c.big ? ' big' : '');
     for (const opt of c.options) {
       const b = document.createElement('button');
-      b.className = 'choice';
+      b.className = 'choice' + (c.selected != null && opt.id === c.selected ? ' selected' : '');
       b.textContent = (opt.emoji ? opt.emoji + ' ' : '') + opt.label;
-      b.addEventListener('click', () => send(c.id, opt.id));
+      if (opt.disabled) b.disabled = true;
+      else b.addEventListener('click', () => send(c.id, opt.id));
       grid.appendChild(b);
     }
     wrap.appendChild(grid);

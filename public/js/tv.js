@@ -390,15 +390,38 @@ function renderBrawl(payload) {
   const s = payload.state;
   const players = payload.players || [];
   const find = (cid) => players.find((p) => p.id === cid) || { avatar: '🎮', name: '—' };
+  const charOf = (cid) => renderFighterToken((s.chars && s.chars[cid]) || find(cid).avatar);
   const att = s.order[s.turnIndex];
 
+  if (s.phase === 'setup') {
+    const sf = (cid) => {
+      const p = find(cid); const ch = s.chars[cid]; const rdy = s.ready[cid];
+      return `<div class="fighter">
+        <div class="big-fighter">${ch ? renderFighterToken(ch) : '❓'}</div>
+        <div class="bf-name">${escapeHtml(p.name)} ${rdy ? '✅' : ''}</div>
+        <div class="bf-sub">${rdy ? 'ready!' : ch ? 'picking…' : 'choosing…'}</div>
+      </div>`;
+    };
+    gameStage.innerHTML = `
+      <div class="brawl-stage world-${s.world.id}">
+        <div class="brawl-world">${s.world.emoji || ''} ${escapeHtml(s.world.name)}</div>
+        <div class="brawl-banner">Choose your fighters!</div>
+        <div class="brawl-arena">
+          ${sf(s.order[0])}
+          <div class="brawl-center"><div class="brawl-vs">VS</div></div>
+          ${sf(s.order[1])}
+        </div>
+        <div class="brawl-msg">Pick your character &amp; level on your phones, then tap Ready!</div>
+      </div>`;
+    return;
+  }
+
   if (s.phase === 'over') {
-    const win = find(s.winner); const lose = find(s.loser);
     gameStage.innerHTML = `
       <div class="brawl-stage world-${s.world.id}">
         <div class="brawl-over">
-          <div class="brawl-champ">🏆<div class="big-fighter cheer">${win.avatar}</div><div class="bf-name">${escapeHtml(win.name)} WINS!</div></div>
-          <div class="brawl-trash">🗑️<div class="big-fighter">${lose.avatar}</div><div class="bf-name">${escapeHtml(lose.name)}</div></div>
+          <div class="brawl-champ">🏆<div class="big-fighter cheer">${charOf(s.winner)}</div><div class="bf-name">${escapeHtml(find(s.winner).name)} WINS!</div></div>
+          <div class="brawl-trash">🗑️<div class="big-fighter">${charOf(s.loser)}</div><div class="bf-name">${escapeHtml(find(s.loser).name)}</div></div>
         </div>
       </div>`;
     confettiBurst();
@@ -415,7 +438,7 @@ function renderBrawl(payload) {
     const active = cid === att && s.phase !== 'over';
     return `<div class="fighter ${side} ${active ? 'active' : ''}">
       <div class="hp">${renderHearts(s.hearts[cid], s.maxHearts)}</div>
-      <div class="big-fighter">${p.avatar}</div>
+      <div class="big-fighter">${charOf(cid)}</div>
       <div class="bf-name">${escapeHtml(p.name)}</div>
     </div>`;
   };
@@ -439,6 +462,11 @@ function renderBrawl(payload) {
 }
 const WEAPON_EMOJI = { sword: '⚔️', axe: '🪓', bow: '🏹', dynamite: '🧨' };
 function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+// A fighter token is an emoji, or an uploaded image referenced as "img:<url>".
+function renderFighterToken(ch) {
+  if (typeof ch === 'string' && ch.startsWith('img:')) return `<img class="fighter-img" src="${ch.slice(4)}" alt="fighter">`;
+  return ch || '❓';
+}
 
 // ---------- Narration ----------
 function primeSpeech() {

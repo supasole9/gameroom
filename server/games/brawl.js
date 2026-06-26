@@ -21,11 +21,14 @@ const WEAPONS = {
 const FACES = ['sword', 'axe', 'bow', 'dynamite', 'wild', 'heal'];
 
 const WORLDS = [
-  { id: 'hill', name: 'Easy Hill' },
-  { id: 'grotto', name: 'Powder-Keg Grotto' },
-  { id: 'fjord', name: 'Icy Fjord' },
-  { id: 'volcano', name: 'Extreme Volcano' },
+  { id: 'hill', name: 'Easy Hill', emoji: '🌄' },
+  { id: 'grotto', name: 'Powder-Keg Grotto', emoji: '🛢️' },
+  { id: 'fjord', name: 'Icy Fjord', emoji: '🧊' },
+  { id: 'volcano', name: 'Extreme Volcano', emoji: '🌋' },
 ];
+
+// Fighter characters to choose from (until uploaded images land).
+const ROSTER = ['🥷', '🧙', '🦸', '🦹', '🤖', '👹', '👺', '🧛', '🧟', '🤠', '🧞', '🐉', '🦖', '👻', '🦝', '🐲'];
 
 const clampHearts = (v) => Math.max(0, Math.round(v * 2) / 2);
 const name = (ctx, cid) => ctx.players.find((p) => p.id === cid)?.name || 'Player';
@@ -40,30 +43,46 @@ function clearTimer(ctx) {
   if (ctx.room._brawlTimer) { clearTimeout(ctx.room._brawlTimer); ctx.room._brawlTimer = null; }
 }
 
-function startGame(ctx) {
+// Pre-game: each fighter picks a character; anyone picks the world.
+function startSetup(ctx) {
   clearTimer(ctx);
   const duel = ctx.players.slice(0, 2).map((p) => p.id);
-  const hearts = {};
-  for (const id of duel) hearts[id] = MAX_HEARTS;
-  const world = WORLDS[Math.floor(Math.random() * WORLDS.length)];
+  const chars = {}; const ready = {};
+  for (const id of duel) { chars[id] = null; ready[id] = false; }
   ctx.state = {
-    order: duel,         // [leftFighter, rightFighter]
-    turnIndex: 0,        // 0 or 1 — whose turn (attacker)
-    hearts,
+    order: duel,
+    phase: 'setup',
+    chars,
+    ready,
+    world: WORLDS[0],
     maxHearts: MAX_HEARTS,
-    world,
-    phase: 'roll',       // roll | aim | defense | over
-    dice: null,
-    weapon: null,
-    pendingQuality: null,
-    defenseToken: 0,
-    seq: 0,
-    lastEvent: null,     // weapon | miss | hit | dodge | kickback | heal | win
-    message: `${name(ctx, duel[0])} starts the brawl!`,
+    lastEvent: null,
+    message: 'Choose your fighter and your level!',
     winner: null,
   };
   render(ctx);
-  ctx.narrate(`Roll the Brawl! ${name(ctx, duel[0])} versus ${name(ctx, duel[1])} at the ${world.name}. ${name(ctx, duel[0])}, roll the dice!`);
+  ctx.narrate('Roll the Brawl! Pick your fighters and your level!');
+}
+
+// Start (or restart) the actual fight, keeping the chosen characters + world.
+function beginBattle(ctx) {
+  clearTimer(ctx);
+  const s = ctx.state;
+  s.hearts = {};
+  for (const id of s.order) s.hearts[id] = MAX_HEARTS;
+  s.turnIndex = 0;
+  s.phase = 'roll';
+  s.dice = null;
+  s.weapon = null;
+  s.pendingQuality = null;
+  s.defenseToken = 0;
+  s.seq = 0;
+  s.lastEvent = null;
+  s.winner = null;
+  s.loser = null;
+  s.message = `${name(ctx, s.order[0])} starts the brawl!`;
+  render(ctx);
+  ctx.narrate(`${name(ctx, s.order[0])} versus ${name(ctx, s.order[1])} at the ${s.world.name}. ${name(ctx, s.order[0])}, roll the dice!`);
 }
 
 function endGame(ctx, winnerId) {
@@ -179,12 +198,32 @@ function renderControllers(ctx) {
     if (!s.order.includes(p.id)) {
       return { title: '🥊 Roll the Brawl', subtitle: 'Watch the duel on the TV!', controls: [] };
     }
+    if (s.phase === 'setup') {
+      if (!s.order.includes(p.id)) return { title: '🥊 Roll the Brawl', subtitle: 'Watch the duel on the TV!', controls: [] };
+      const other = s.order.find((id) => id !== p.id);
+      const myChar = s.chars[p.id];
+      if (s.ready[p.id]) {
+        return { title: '✅ Ready!', subtitle: 'Waiting for your opponent…', controls: [{ type: 'text', value: `You: ${myChar} · Level: ${s.world.emoji} ${s.world.name}` }] };
+      }
+      return {
+        title: 'Pick your fighter!',
+        subtitle: `Level: ${s.world.emoji} ${s.world.name}`,
+        controls: [
+          { type: 'choices', id: 'char', label: 'Your character:', selected: myChar, options: ROSTER.map((e) => ({ id: e, label: e, disabled: s.chars[other] === e })) },
+          { type: 'choices', id: 'world', label: 'Level / background:', selected: s.world.id, options: WORLDS.map((w) => ({ id: w.id, label: `${w.emoji} ${w.name}` })) },
+          { type: 'button', id: 'ready', label: myChar ? '✅ Ready!' : '⬆️ Pick a character first', big: true, color: myChar ? '#22c55e' : '#94a3b8' },
+        ],
+      };
+    }
     if (s.phase === 'over') {
       const won = s.winner === p.id;
       return {
         title: won ? '🏆 You WIN!' : '🗑️ KO!',
         subtitle: won ? 'Champion of the brawl!' : 'Into the trash bin you go…',
-        controls: [{ type: 'button', id: 'again', label: '🔁 Rematch', big: true, color: '#22c55e' }],
+        controls: [
+          { type: 'button', id: 'again', label: '🔁 Rematch', big: true, color: '#22c55e' },
+          { type: 'button', id: 'setup', label: '⚙️ Change fighter / level', color: '#7c5cff' },
+        ],
       };
     }
     const hp = `❤️ ${s.hearts[p.id]}`;
@@ -230,15 +269,32 @@ export default {
 
   sync(ctx) { render(ctx); },
 
-  init(ctx) { startGame(ctx); },
+  init(ctx) { startSetup(ctx); },
 
   onAction(ctx, player, action) {
     const s = ctx.state;
     if (s.phase === 'over') {
-      if (action.control === 'again') startGame(ctx);
+      if (action.control === 'again') beginBattle(ctx);   // rematch, same fighters/level
+      else if (action.control === 'setup') startSetup(ctx); // change fighters/level
       return;
     }
     if (!s.order.includes(player.id)) return; // spectators can't act
+
+    if (s.phase === 'setup') {
+      if (action.control === 'char' && ROSTER.includes(action.value)) {
+        // can't take the other fighter's character
+        const taken = s.order.some((id) => id !== player.id && s.chars[id] === action.value);
+        if (!taken) { s.chars[player.id] = action.value; render(ctx); }
+      } else if (action.control === 'world') {
+        const w = WORLDS.find((x) => x.id === action.value);
+        if (w) { s.world = w; render(ctx); }
+      } else if (action.control === 'ready') {
+        if (s.chars[player.id]) s.ready[player.id] = true;
+        if (s.order.every((id) => s.ready[id] && s.chars[id])) beginBattle(ctx);
+        else render(ctx);
+      }
+      return;
+    }
     const att = s.order[s.turnIndex];
     const def = s.order[1 - s.turnIndex];
 
