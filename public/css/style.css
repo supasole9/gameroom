@@ -233,6 +233,19 @@ canvas.pad { display: block; width: 100%; touch-action: none; background: #fff; 
   display: flex; flex-direction: column;
 }
 .tv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2vh; }
+#topHeader.collapsed { display: none; }
+.hdr-mini {
+  background: rgba(255,255,255,.15); color: #fff; border: none; border-radius: 10px;
+  padding: .4vw 1vw; font-size: 1vw; font-weight: 700; margin-left: 1vw; cursor: pointer; vertical-align: middle;
+}
+.hdr-mini:hover { background: rgba(255,255,255,.28); }
+.hdr-toggle {
+  position: fixed; top: 1.4vh; right: 1.4vw; z-index: 40;
+  width: 3.4vw; height: 3.4vw; min-width: 38px; min-height: 38px;
+  border-radius: 50%; border: none; background: rgba(124,92,255,.85); color: #fff;
+  font-size: 1.6vw; font-weight: 800; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.4);
+}
+.hdr-toggle:hover { background: var(--purple); }
 .tv-title { font-size: 3vw; font-weight: 800; }
 .tv-code-box { text-align: right; }
 .tv-code-box .lbl { font-size: 1.3vw; color: var(--muted); }

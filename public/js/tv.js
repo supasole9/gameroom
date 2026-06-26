@@ -8,6 +8,16 @@ const gameStage = $('gameStage');
 
 let games = [];
 
+// ---------- Collapsible top header (title + room code/QR) ----------
+const HIDE_KEY = 'arcadeHideHeader';
+function applyHeader(hidden) {
+  $('topHeader').classList.toggle('collapsed', hidden);
+  $('hdrShow').classList.toggle('hide', !hidden);
+}
+applyHeader(localStorage.getItem(HIDE_KEY) === '1');
+$('hdrHide').addEventListener('click', () => { localStorage.setItem(HIDE_KEY, '1'); applyHeader(true); });
+$('hdrShow').addEventListener('click', () => { localStorage.setItem(HIDE_KEY, '0'); applyHeader(false); });
+
 // On load, this screen becomes the host/TV. We pass our own origin so the
 // server can build a QR code that points exactly where we're served from.
 socket.on('connect', () => socket.emit('host:create', { origin: location.origin }));
