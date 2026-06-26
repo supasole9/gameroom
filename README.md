@@ -13,6 +13,7 @@ Built so you can keep adding games to the arcade. Three are included:
 | **Draw & Guess** | 🎨 | One player draws a secret word on their phone — it appears live on the TV — everyone else taps to guess. |
 | **Math Tug of War** | 🪢 | 2-player duel: answer math questions fast to pull the rope your way. Each player picks their own difficulty, so mixed ages compete fairly. |
 | **Lāʻie & Kahuku** | 🏝️ | Monopoly-lite around the real North Shore towns — buy shrimp trucks, beaches and farms, pay rent, draw Hukilau cards. Richest player wins (nobody gets eliminated early). |
+| **Roll the Brawl** | 🗡️ | 2-player duel! Roll for a weapon (or recharge a heart), play a mini-game to aim, and the defender gets a split-second to dodge or kick dynamite back. 3 hearts (half-heart hits); loser goes in the trash bin. |
 
 ## Run it
 

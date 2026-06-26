@@ -33,6 +33,8 @@ let palette = [];                 // available emojis to pick from
 let takenSet = new Set();         // emojis already used in the room
 let currentScreen = 'join';       // 'join' | 'lobby' | 'game'
 let padClear = null;              // clears the local drawing pad, if one is shown
+let cleanups = [];               // teardown for active widgets (timers/animation frames)
+function runCleanups() { cleanups.forEach((fn) => { try { fn(); } catch (e) { /* ignore */ } }); cleanups = []; }
 
 // ---------- Join screen: dynamic name rows ----------
 function addNameRow(name = '') {
@@ -149,6 +151,7 @@ function renderLobby() {
   renderSeatBar(new Set());
   $('ctrlTitle').textContent = "You're in! 🎉";
   $('ctrlSub').textContent = 'Tap to pick your emoji, then watch the TV…';
+  runCleanups();
   controlsEl.innerHTML = '';
   for (const seat of mySeats) {
     const block = document.createElement('div');
@@ -246,6 +249,7 @@ function renderView(view, seat) {
   const prefix = mySeats.length > 1 ? `${seat.avatar} ${seat.name} — ` : '';
   $('ctrlTitle').textContent = (prefix && view.title ? prefix : '') + (view.title || '');
   $('ctrlSub').textContent = view.subtitle || '';
+  runCleanups();
   controlsEl.innerHTML = '';
   padClear = null; // rebuilt by buildDrawPad if this view has a pad
   for (const c of (view.controls || [])) controlsEl.appendChild(buildControl(c));
@@ -298,9 +302,19 @@ function buildControl(c) {
     grid.className = 'choices' + (c.big ? ' big' : '');
     for (const opt of c.options) {
       const b = document.createElement('button');
-      b.className = 'choice';
-      b.textContent = (opt.emoji ? opt.emoji + ' ' : '') + opt.label;
-      b.addEventListener('click', () => send(c.id, opt.id));
+      b.className = 'choice' + (c.selected != null && opt.id === c.selected ? ' selected' : '');
+      if (opt.img) {
+        b.classList.add('has-img');
+        const im = document.createElement('img');
+        im.className = 'choice-img'; im.src = opt.img; im.alt = '';
+        const nm = document.createElement('span');
+        nm.className = 'cname'; nm.textContent = opt.label;
+        b.append(im, nm);
+      } else {
+        b.textContent = (opt.emoji ? opt.emoji + ' ' : '') + opt.label;
+      }
+      if (opt.disabled) b.disabled = true;
+      else b.addEventListener('click', () => send(c.id, opt.id));
       grid.appendChild(b);
     }
     wrap.appendChild(grid);
@@ -326,7 +340,225 @@ function buildControl(c) {
     return wrap;
   }
   if (c.type === 'draw') return buildDrawPad();
+  if (c.type === 'timing') return buildTiming(c);
+  if (c.type === 'flick') return buildFlick(c);
+  if (c.type === 'reaction') return buildReaction(c);
+  if (c.type === 'upload') return buildUpload(c);
   return document.createElement('div');
+}
+
+// ---------- Character image upload + editor ----------
+function buildUpload(c) {
+  const b = document.createElement('button');
+  b.className = 'btn';
+  b.style.background = c.color || '#7c5cff';
+  b.textContent = c.label || '📷 Upload your own';
+  b.addEventListener('click', () => openImageEditor(actingPid));
+  return b;
+}
+
+function openImageEditor(pid) {
+  const ov = document.createElement('div');
+  ov.className = 'editor-overlay';
+  ov.innerHTML = `
+    <div class="editor">
+      <div class="editor-title">Make your fighter 🥊</div>
+      <div class="editor-hint">Aim them facing the ➡️ side. We flip the other player so you face each other.</div>
+      <div class="editor-canvas-wrap">
+        <canvas id="edCanvas" width="256" height="256"></canvas>
+        <div class="editor-arrow">➡️</div>
+      </div>
+      <label class="editor-file"><input id="edFile" type="file" accept="image/*"> 📁 Choose a photo</label>
+      <label class="editor-row">Size <input id="edScale" type="range" min="0.1" max="3" step="0.01" value="1"></label>
+      <div class="editor-row btns">
+        <button id="edRotL" class="btn-secondary" type="button">⟲ Turn</button>
+        <button id="edRotR" class="btn-secondary" type="button">Turn ⟳</button>
+        <button id="edFlip" class="btn-secondary" type="button">↔ Flip</button>
+      </div>
+      <div class="editor-row btns">
+        <button id="edCancel" class="btn-secondary" type="button">Cancel</button>
+        <button id="edUse" class="btn" type="button">Use this fighter ✅</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+
+  const canvas = ov.querySelector('#edCanvas');
+  const ctx = canvas.getContext('2d');
+  let img = null, scale = 1, rot = 0, flip = 1, ox = 0, oy = 0;
+  function draw() {
+    ctx.clearRect(0, 0, 256, 256);
+    // checker-ish backdrop so a transparent png is visible while editing
+    ctx.fillStyle = 'rgba(255,255,255,.06)';
+    ctx.fillRect(0, 0, 256, 256);
+    if (!img) return;
+    ctx.save();
+    ctx.translate(128 + ox, 128 + oy);
+    ctx.rotate(rot);
+    ctx.scale(scale * flip, scale);
+    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+    ctx.restore();
+  }
+  draw();
+
+  ov.querySelector('#edFile').addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      const im = new Image();
+      im.onload = () => {
+        img = im;
+        scale = Math.min(220 / im.width, 220 / im.height) || 1;
+        rot = 0; flip = 1; ox = 0; oy = 0;
+        ov.querySelector('#edScale').value = String(scale);
+        draw();
+      };
+      im.src = r.result;
+    };
+    r.readAsDataURL(f);
+  });
+  ov.querySelector('#edScale').addEventListener('input', (e) => { scale = parseFloat(e.target.value); draw(); });
+  ov.querySelector('#edRotL').addEventListener('click', () => { rot -= Math.PI / 12; draw(); });
+  ov.querySelector('#edRotR').addEventListener('click', () => { rot += Math.PI / 12; draw(); });
+  ov.querySelector('#edFlip').addEventListener('click', () => { flip *= -1; draw(); });
+
+  let dragging = false, lx = 0, ly = 0;
+  const pt = (e) => { const t = e.touches ? e.touches[0] : e; const r = canvas.getBoundingClientRect(); return { x: (t.clientX - r.left) * (256 / r.width), y: (t.clientY - r.top) * (256 / r.height) }; };
+  const down = (e) => { dragging = true; const p = pt(e); lx = p.x; ly = p.y; };
+  const moveH = (e) => { if (!dragging) return; const p = pt(e); ox += p.x - lx; oy += p.y - ly; lx = p.x; ly = p.y; draw(); if (e.cancelable) e.preventDefault(); };
+  const up = () => { dragging = false; };
+  canvas.addEventListener('mousedown', down);
+  window.addEventListener('mousemove', moveH);
+  window.addEventListener('mouseup', up);
+  canvas.addEventListener('touchstart', (e) => { down(e); e.preventDefault(); }, { passive: false });
+  canvas.addEventListener('touchmove', moveH, { passive: false });
+  canvas.addEventListener('touchend', up);
+
+  function close() {
+    window.removeEventListener('mousemove', moveH);
+    window.removeEventListener('mouseup', up);
+    ov.remove();
+  }
+  ov.querySelector('#edCancel').addEventListener('click', close);
+  ov.querySelector('#edUse').addEventListener('click', () => {
+    if (img) socket.emit('player:setCharacterImage', { pid, dataUrl: canvas.toDataURL('image/png') });
+    close();
+  });
+  cleanups.push(close);
+}
+
+// ---------- Reusable mini-game widgets ----------
+// Tap-when-it's-green timing bar. Grades to 'perfect' | 'minor' | 'miss'.
+function buildTiming(c) {
+  const wrap = document.createElement('div');
+  wrap.className = 'mini';
+  const hint = document.createElement('div');
+  hint.className = 'mini-hint';
+  hint.textContent = c.label || "Tap when the marker is in the GREEN — middle is PERFECT!";
+  const track = document.createElement('div');
+  track.className = 'timing-track';
+  track.innerHTML = '<div class="timing-green"></div><div class="timing-perfect"></div><div class="timing-marker"></div>';
+  const marker = track.querySelector('.timing-marker');
+  const btn = document.createElement('button');
+  btn.className = 'btn big';
+  btn.style.background = c.color || '#ff6b6b';
+  btn.textContent = 'TAP!';
+  wrap.append(hint, track, btn);
+
+  const dur = c.speed === 'hard' ? 900 : 1500;
+  let raf, startT = null, done = false;
+  const setPos = (p) => { marker.style.left = (p * 100) + '%'; };
+  function frame(t) {
+    if (startT === null) startT = t;
+    let p = (t - startT) / dur;
+    if (p >= 1) { setPos(1); return finish('miss'); }
+    setPos(p);
+    raf = requestAnimationFrame(frame);
+  }
+  function grade() {
+    const p = parseFloat(marker.style.left) || 0;
+    const dist = Math.abs(p - 50);
+    if (dist <= 7) return 'perfect';
+    if (dist <= 22) return 'minor';
+    return 'miss';
+  }
+  function finish(forced) {
+    if (done) return;
+    done = true;
+    cancelAnimationFrame(raf);
+    btn.disabled = true;
+    send(c.id, forced || grade());
+  }
+  btn.addEventListener('click', () => finish());
+  raf = requestAnimationFrame(frame);
+  cleanups.push(() => { done = true; cancelAnimationFrame(raf); });
+  return wrap;
+}
+
+// Flick/swipe up. Grades by distance + speed to 'perfect' | 'minor' | 'miss'.
+function buildFlick(c) {
+  const wrap = document.createElement('div');
+  wrap.className = 'mini';
+  const hint = document.createElement('div');
+  hint.className = 'mini-hint';
+  hint.textContent = c.label || 'FLICK UP fast to shoot! 🏹';
+  const pad = document.createElement('div');
+  pad.className = 'flick-pad';
+  pad.textContent = '⬆️';
+  wrap.append(hint, pad);
+
+  let startY = null, startT = 0, done = false;
+  const begin = (e) => { const t = e.touches ? e.touches[0] : e; startY = t.clientY; startT = performance.now(); e.preventDefault(); };
+  const finishGesture = (e) => {
+    if (done || startY === null) return;
+    const t = e.changedTouches ? e.changedTouches[0] : e;
+    const dy = startY - t.clientY;            // up is positive
+    const speed = dy / Math.max(performance.now() - startT, 1);
+    let q = 'miss';
+    if (dy > 40) q = speed > 0.9 ? 'perfect' : 'minor';
+    finish(q);
+  };
+  function finish(q) { if (done) return; done = true; pad.textContent = q === 'miss' ? '❌' : '💥'; send(c.id, q); }
+  pad.addEventListener('mousedown', begin);
+  window.addEventListener('mouseup', finishGesture);
+  pad.addEventListener('touchstart', begin, { passive: false });
+  pad.addEventListener('touchend', finishGesture);
+  const timer = setTimeout(() => finish('miss'), 2600);
+  cleanups.push(() => { done = true; clearTimeout(timer); window.removeEventListener('mouseup', finishGesture); });
+  return wrap;
+}
+
+// Time-limited reaction: pick a button before the bar empties, else 'toolate'.
+function buildReaction(c) {
+  const wrap = document.createElement('div');
+  wrap.className = 'mini reaction';
+  const prompt = document.createElement('div');
+  prompt.className = 'reaction-prompt';
+  prompt.textContent = c.prompt || 'INCOMING! ⚡';
+  const barWrap = document.createElement('div');
+  barWrap.className = 'reaction-bar';
+  const bar = document.createElement('div');
+  bar.className = 'reaction-fill';
+  barWrap.appendChild(bar);
+  const btns = document.createElement('div');
+  btns.className = 'controls';
+  wrap.append(prompt, barWrap, btns);
+
+  let done = false;
+  function finish(val) { if (done) return; done = true; clearTimeout(timer); send(c.id, val); }
+  for (const b of (c.buttons || [])) {
+    const el = document.createElement('button');
+    el.className = 'btn big';
+    el.style.background = b.color || '#22c55e';
+    el.textContent = b.label;
+    el.addEventListener('click', () => finish(b.id));
+    btns.appendChild(el);
+  }
+  const ms = c.ms || 1600;
+  requestAnimationFrame(() => { bar.style.transition = `width ${ms}ms linear`; bar.style.width = '0%'; });
+  const timer = setTimeout(() => finish('toolate'), ms);
+  cleanups.push(() => { done = true; clearTimeout(timer); });
+  return wrap;
 }
 
 // ---------- Drawing pad ----------
