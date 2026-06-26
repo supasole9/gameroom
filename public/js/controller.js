@@ -303,7 +303,16 @@ function buildControl(c) {
     for (const opt of c.options) {
       const b = document.createElement('button');
       b.className = 'choice' + (c.selected != null && opt.id === c.selected ? ' selected' : '');
-      b.textContent = (opt.emoji ? opt.emoji + ' ' : '') + opt.label;
+      if (opt.img) {
+        b.classList.add('has-img');
+        const im = document.createElement('img');
+        im.className = 'choice-img'; im.src = opt.img; im.alt = '';
+        const nm = document.createElement('span');
+        nm.className = 'cname'; nm.textContent = opt.label;
+        b.append(im, nm);
+      } else {
+        b.textContent = (opt.emoji ? opt.emoji + ' ' : '') + opt.label;
+      }
       if (opt.disabled) b.disabled = true;
       else b.addEventListener('click', () => send(c.id, opt.id));
       grid.appendChild(b);

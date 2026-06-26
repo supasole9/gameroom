@@ -6,6 +6,7 @@
 // Built on reusable pieces: the dice helper, the controller mini-game widgets
 // (timing / flick / reaction), and the TV half-heart life bar.
 import { rollDie } from '../lib/dice.js';
+import { characterLibrary } from '../lib/characters.js';
 
 const MAX_HEARTS = 3;
 
@@ -205,11 +206,15 @@ function renderControllers(ctx) {
       if (s.ready[p.id]) {
         return { title: '✅ Ready!', subtitle: 'Waiting for your opponent…', controls: [{ type: 'text', value: `You: ${myChar} · Level: ${s.world.emoji} ${s.world.name}` }] };
       }
+      const lib = characterLibrary();
+      const charOptions = lib.length
+        ? lib.map((c) => ({ id: c.token, label: c.name, img: c.url, disabled: s.chars[other] === c.token }))
+        : ROSTER.map((e) => ({ id: e, label: e, disabled: s.chars[other] === e }));
       return {
         title: 'Pick your fighter!',
         subtitle: `Level: ${s.world.emoji} ${s.world.name}`,
         controls: [
-          { type: 'choices', id: 'char', label: 'Your character:', selected: myChar, options: ROSTER.map((e) => ({ id: e, label: e, disabled: s.chars[other] === e })) },
+          { type: 'choices', id: 'char', label: 'Your character:', selected: myChar, options: charOptions },
           { type: 'upload', id: 'charimg', label: (myChar && String(myChar).startsWith('img:')) ? '📷 Photo set ✓ — change?' : '📷 Upload your own' },
           { type: 'choices', id: 'world', label: 'Level / background:', selected: s.world.id, options: WORLDS.map((w) => ({ id: w.id, label: `${w.emoji} ${w.name}` })) },
           { type: 'button', id: 'ready', label: myChar ? '✅ Ready!' : '⬆️ Pick a character first', big: true, color: myChar ? '#22c55e' : '#94a3b8' },
@@ -282,10 +287,11 @@ export default {
     if (!s.order.includes(player.id)) return; // spectators can't act
 
     if (s.phase === 'setup') {
-      if (action.control === 'char' && ROSTER.includes(action.value)) {
+      if (action.control === 'char') {
+        const allowed = new Set([...ROSTER, ...characterLibrary().map((c) => c.token)]);
         // can't take the other fighter's character
         const taken = s.order.some((id) => id !== player.id && s.chars[id] === action.value);
-        if (!taken) { s.chars[player.id] = action.value; render(ctx); }
+        if (allowed.has(action.value) && !taken) { s.chars[player.id] = action.value; render(ctx); }
       } else if (action.control === 'world') {
         const w = WORLDS.find((x) => x.id === action.value);
         if (w) { s.world = w; render(ctx); }
