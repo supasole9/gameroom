@@ -25,7 +25,9 @@ export function takenAvatars(room) {
 // Change a seat's avatar. Refuses if another player already has that emoji
 // (so tokens stay distinct on the board). Returns true on success.
 export function setAvatar(room, pid, avatar) {
-  if (!AVATARS.includes(avatar)) return false;
+  // Allow a palette emoji OR an uploaded character image token.
+  const valid = AVATARS.includes(avatar) || /^img:\/characters\/[\w.%-]+$/i.test(avatar);
+  if (!valid) return false;
   const p = room.players.get(pid);
   if (!p) return false;
   for (const other of room.players.values()) {

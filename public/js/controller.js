@@ -30,7 +30,13 @@ const seatViews = new Map();      // pid -> { seat, view }
 let shownPid = null;              // seat currently displayed
 let actingPid = null;             // seat an action will be attributed to
 let palette = [];                 // available emojis to pick from
-let takenSet = new Set();         // emojis already used in the room
+let characters = [];              // uploaded character images usable as avatars
+let takenSet = new Set();         // avatars already used in the room
+// An avatar is an emoji string, or an uploaded image token "img:<url>".
+function avatarMarkup(av) {
+  if (typeof av === 'string' && av.startsWith('img:')) return `<img class="av-img" src="${av.slice(4)}" alt="">`;
+  return av || '🎮';
+}
 let currentScreen = 'join';       // 'join' | 'lobby' | 'game'
 let padClear = null;              // clears the local drawing pad, if one is shown
 let cleanups = [];               // teardown for active widgets (timers/animation frames)
@@ -90,10 +96,11 @@ function tryJoin() {
 $('joinBtn').addEventListener('click', tryJoin);
 
 // ---------- Join result ----------
-socket.on('controller:joined', ({ seats, palette: pal }) => {
+socket.on('controller:joined', ({ seats, palette: pal, characters: chars }) => {
   joined = true;
   mySeats = seats || [];
   if (pal) palette = pal;
+  if (chars) characters = chars;
   persistSeats();
   joinScreen.classList.add('hide');
   playScreen.classList.remove('hide');
@@ -146,31 +153,40 @@ socket.on('controller:lobby', ({ phase }) => {
   else { currentScreen = 'game'; }
 });
 
-// Lobby/waiting screen with an emoji picker for each of this phone's players.
+// Lobby/waiting screen with an avatar picker (emojis + uploaded characters).
 function renderLobby() {
   renderSeatBar(new Set());
   $('ctrlTitle').textContent = "You're in! 🎉";
-  $('ctrlSub').textContent = 'Tap to pick your emoji, then watch the TV…';
+  $('ctrlSub').textContent = 'Pick your look, then watch the TV…';
   runCleanups();
   controlsEl.innerHTML = '';
+
+  // emojis, then uploaded character images
+  const options = [
+    ...palette.map((emo) => ({ id: emo, emoji: emo })),
+    ...characters.map((c) => ({ id: c.token, img: c.url })),
+  ];
+
   for (const seat of mySeats) {
     const block = document.createElement('div');
     block.className = 'seat-edit';
     const label = document.createElement('div');
     label.className = 'seat-edit-name';
-    label.innerHTML = `<span class="big-av">${seat.avatar || '🎮'}</span> ${seat.name}`;
+    label.innerHTML = `<span class="big-av">${avatarMarkup(seat.avatar)}</span> ${seat.name}`;
     block.appendChild(label);
+
     const grid = document.createElement('div');
     grid.className = 'emoji-pick';
-    for (const emo of palette) {
+    for (const opt of options) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'emoji-opt' + (emo === seat.avatar ? ' selected' : '');
-      b.textContent = emo;
-      if (takenSet.has(emo) && emo !== seat.avatar) {
+      b.className = 'emoji-opt' + (opt.id === seat.avatar ? ' selected' : '') + (opt.img ? ' img-opt' : '');
+      if (opt.img) { const im = document.createElement('img'); im.src = opt.img; im.alt = ''; b.appendChild(im); }
+      else b.textContent = opt.emoji;
+      if (takenSet.has(opt.id) && opt.id !== seat.avatar) {
         b.disabled = true;
       } else {
-        b.addEventListener('click', () => socket.emit('player:setAvatar', { pid: seat.pid, avatar: emo }));
+        b.addEventListener('click', () => socket.emit('player:setAvatar', { pid: seat.pid, avatar: opt.id }));
       }
       grid.appendChild(b);
     }
@@ -234,7 +250,7 @@ function renderSeatBar(activeSet) {
     chip.className = 'seat-chip'
       + (activeSet.has(s.pid) ? ' active' : '')
       + (s.pid === shownPid ? ' shown' : '');
-    chip.innerHTML = `<span class="av">${s.avatar || '🎮'}</span><span>${s.name}</span>`;
+    chip.innerHTML = `<span class="av">${avatarMarkup(s.avatar)}</span><span>${s.name}</span>`;
     if (activeSet.size > 1 && activeSet.has(s.pid)) {
       chip.addEventListener('click', () => { shownPid = s.pid; renderAll(); });
     } else {

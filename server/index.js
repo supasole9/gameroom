@@ -216,6 +216,7 @@ io.on('connection', (socket) => {
       code: room.code,
       seats: accepted.map((p) => ({ pid: p.id, name: p.name, avatar: p.avatar })),
       palette: AVATARS,
+      characters: characterLibrary(),
     });
     sendLobby(room);
     sendRosterAll(room);
