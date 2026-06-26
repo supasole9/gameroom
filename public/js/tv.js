@@ -456,7 +456,10 @@ function renderBrawl(payload) {
   let center = '';
   if (s.phase === 'roll') center = `<div class="brawl-dice ${payload.animateRoll ? 'rolling' : ''}">${diceFace(s.dice)}</div>`;
   else if (s.phase === 'aim') center = `<div class="brawl-weapon">${WEAPON_EMOJI[s.weapon] || '🎯'}<div class="bw-name">${capitalize(s.weapon)}</div><div class="bw-sub">aiming…</div></div>`;
-  else if (s.phase === 'defense') center = `<div class="brawl-incoming">⚡<div>INCOMING!</div></div>`;
+  else if (s.phase === 'defense') {
+    const kindLbl = { timing: 'Time it!', mash: 'Mash!', aim: 'Jump the right way!', catch: 'Catch it!' };
+    center = `<div class="brawl-incoming">⚡<div>INCOMING!</div><div class="brawl-dodgekind">${s.dodge ? (kindLbl[s.dodge.kind] || '') : ''}</div></div>`;
+  }
 
   gameStage.innerHTML = `
     <div class="brawl-stage world-${s.world.id}">

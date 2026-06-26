@@ -343,8 +343,85 @@ function buildControl(c) {
   if (c.type === 'timing') return buildTiming(c);
   if (c.type === 'flick') return buildFlick(c);
   if (c.type === 'reaction') return buildReaction(c);
+  if (c.type === 'challenge') return buildChallenge(c);
   if (c.type === 'upload') return buildUpload(c);
   return document.createElement('div');
+}
+
+// A random, timed dodge challenge. Emits 'ok' (success), 'fail' (wrong), or
+// 'toolate' (ran out of time). Reusable for any "react under pressure" moment.
+function buildChallenge(c) {
+  const wrap = document.createElement('div');
+  wrap.className = 'mini reaction';
+  const prompt = document.createElement('div');
+  prompt.className = 'reaction-prompt';
+  prompt.textContent = c.prompt || 'DODGE!';
+  const barWrap = document.createElement('div');
+  barWrap.className = 'reaction-bar';
+  const bar = document.createElement('div');
+  bar.className = 'reaction-fill';
+  barWrap.appendChild(bar);
+  const body = document.createElement('div');
+  body.className = 'challenge-body';
+  wrap.append(prompt, barWrap, body);
+
+  let done = false, raf = 0;
+  const ms = c.ms || 2200;
+  function finish(val) { if (done) return; done = true; clearTimeout(timer); cancelAnimationFrame(raf); send(c.id, val); }
+  const timer = setTimeout(() => finish('toolate'), ms);
+  requestAnimationFrame(() => { bar.style.transition = `width ${ms}ms linear`; bar.style.width = '0%'; });
+
+  if (c.kind === 'mash') {
+    const need = c.taps || 5; let n = 0;
+    const btn = document.createElement('button');
+    btn.className = 'btn big'; btn.style.background = '#22c55e';
+    const upd = () => { btn.textContent = `TAP FAST! ${n}/${need}`; };
+    upd();
+    btn.addEventListener('click', () => { if (done) return; n++; upd(); if (n >= need) finish('ok'); });
+    body.appendChild(btn);
+  } else if (c.kind === 'aim') {
+    const row = document.createElement('div');
+    row.className = 'choices';
+    for (const d of ['⬅️', '⬆️', '➡️']) {
+      const btn = document.createElement('button');
+      btn.className = 'choice'; btn.textContent = d;
+      btn.addEventListener('click', () => { if (done) return; finish(d === c.dir ? 'ok' : 'fail'); });
+      row.appendChild(btn);
+    }
+    body.appendChild(row);
+  } else if (c.kind === 'catch') {
+    const box = document.createElement('div');
+    box.className = 'catch-box';
+    const target = document.createElement('button');
+    target.className = 'catch-target'; target.textContent = '🎯';
+    const need = c.hits || 2; let hits = 0;
+    const place = () => { target.style.left = (8 + Math.random() * 74) + '%'; target.style.top = (8 + Math.random() * 64) + '%'; };
+    target.addEventListener('click', () => { if (done) return; hits++; if (hits >= need) finish('ok'); else place(); });
+    box.appendChild(target); body.appendChild(box); place();
+  } else { // 'timing' — tap while the marker is near the middle
+    const track = document.createElement('div');
+    track.className = 'timing-track';
+    track.innerHTML = '<div class="timing-green"></div><div class="timing-perfect"></div><div class="timing-marker"></div>';
+    const marker = track.querySelector('.timing-marker');
+    const btn = document.createElement('button');
+    btn.className = 'btn big'; btn.style.background = '#22c55e'; btn.textContent = 'TAP!';
+    body.append(track, btn);
+    const dur = c.speed === 'hard' ? 800 : 1200;
+    let startT = null;
+    const frame = (t) => {
+      if (done) return;
+      if (startT === null) startT = t;
+      const tri = Math.abs((((t - startT) / dur) % 2) - 1); // bounce 0..1..0
+      marker.style.left = (tri * 100) + '%';
+      raf = requestAnimationFrame(frame);
+    };
+    const grade = () => (Math.abs((parseFloat(marker.style.left) || 0) - 50) <= 22 ? 'ok' : 'fail');
+    btn.addEventListener('click', () => finish(grade()));
+    raf = requestAnimationFrame(frame);
+  }
+
+  cleanups.push(() => { done = true; clearTimeout(timer); cancelAnimationFrame(raf); });
+  return wrap;
 }
 
 // ---------- Character image upload + editor ----------

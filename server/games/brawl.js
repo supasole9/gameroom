@@ -119,20 +119,29 @@ function advanceTurn(ctx) {
   render(ctx);
 }
 
+const DODGE_KINDS = ['timing', 'mash', 'aim', 'catch'];
+
 function startDefense(ctx, quality) {
   const s = ctx.state;
   s.phase = 'defense';
   s.pendingQuality = quality;
   s.defenseToken = ++s.seq;
   s.lastEvent = 'incoming';
-  s.message = `${name(ctx, s.order[s.turnIndex])} lands a ${qualityWord(quality).toLowerCase()} hit — react!`;
+  // Pick a RANDOM dodge challenge so it's never just one tap.
+  const hard = quality === 'perfect';
+  s.dodge = {
+    kind: DODGE_KINDS[Math.floor(Math.random() * DODGE_KINDS.length)],
+    ms: hard ? 1900 : 2500,           // tighter window for a perfect hit
+    dir: ['⬅️', '⬆️', '➡️'][Math.floor(Math.random() * 3)],
+    taps: hard ? 6 : 5,
+    speed: hard ? 'hard' : 'easy',
+  };
+  s.message = `${name(ctx, s.order[s.turnIndex])} attacks — ${WEAPONS[s.weapon].kickable ? 'kick it back' : 'dodge'}!`;
   render(ctx);
-  // Backstop in case the defender's phone never answers (a bit longer than the
-  // client reaction window so the phone normally drives the result).
-  const windowMs = quality === 'perfect' ? 1300 : 1700;
+  // Backstop in case the defender's phone never answers.
   clearTimer(ctx);
   const token = s.defenseToken;
-  ctx.room._brawlTimer = setTimeout(() => resolveDefense(ctx, 'toolate', token), windowMs + 2000);
+  ctx.room._brawlTimer = setTimeout(() => resolveDefense(ctx, 'toolate', token), s.dodge.ms + 2500);
 }
 
 function resolveDefense(ctx, response, token) {
@@ -143,17 +152,18 @@ function resolveDefense(ctx, response, token) {
   const def = s.order[1 - s.turnIndex];
   const dmg = s.pendingQuality === 'perfect' ? 1 : 0.5;
   const weapon = WEAPONS[s.weapon];
+  const success = response === 'ok'; // the challenge was beaten in time
 
   let ended = false;
-  if (response === 'dodge') {
-    s.lastEvent = 'dodge';
-    s.message = `${name(ctx, def)} super-jumped and DODGED!`;
-    ctx.narrate(`${name(ctx, def)} dodged!`);
-  } else if (response === 'kickback' && weapon.kickable) {
+  if (success && weapon.kickable) {
     s.lastEvent = 'kickback';
-    s.message = `${name(ctx, def)} kicked the dynamite back at ${name(ctx, att)}! 🧨`;
+    s.message = `${name(ctx, def)} nailed the timing and kicked the dynamite back at ${name(ctx, att)}! 🧨`;
     ctx.narrate(s.message);
     ended = applyDamage(ctx, att, dmg);
+  } else if (success) {
+    s.lastEvent = 'dodge';
+    s.message = `${name(ctx, def)} pulled off the dodge!`;
+    ctx.narrate(`${name(ctx, def)} dodged!`);
   } else {
     s.lastEvent = 'hit';
     s.message = `${qualityWord(s.pendingQuality)} hit on ${name(ctx, def)}!`;
@@ -249,12 +259,22 @@ function renderControllers(ctx) {
     // defender
     if (s.phase === 'defense') {
       const w = WEAPONS[s.weapon];
-      const buttons = [{ id: 'dodge', label: '🦘 SUPER JUMP!', color: '#22c55e' }];
-      if (w.kickable) buttons.push({ id: 'kickback', label: '🦵 KICK IT BACK!', color: '#ff6b6b' });
+      const d = s.dodge;
+      const verb = w.kickable ? '🦵 Kick it BACK!' : '🦘 DODGE!';
+      const promptByKind = {
+        timing: 'Tap when the marker is in the GREEN!',
+        mash: 'MASH the button fast!',
+        aim: `Jump ${d.dir} — tap the arrow!`,
+        catch: 'Catch the target — tap it!',
+      };
       return {
         title: '⚡ INCOMING!',
-        subtitle: 'React fast!',
-        controls: [{ type: 'reaction', id: 'defend', ms: (s.pendingQuality === 'perfect' ? 1300 : 1700), prompt: `${w.emoji} ${qualityWord(s.pendingQuality)} hit coming!`, buttons }],
+        subtitle: w.kickable ? 'Kick the dynamite back!' : 'Pull off the dodge!',
+        controls: [{
+          type: 'challenge', id: 'defend', kind: d.kind, ms: d.ms,
+          dir: d.dir, taps: d.taps, speed: d.speed,
+          prompt: `${verb} ${promptByKind[d.kind]}`,
+        }],
       };
     }
     if (s.phase === 'aim') {
