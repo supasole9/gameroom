@@ -3,9 +3,27 @@
 // guessing keeps it playable for the youngest kids.
 
 const WORDS = [
-  'cat', 'dog', 'sun', 'house', 'tree', 'fish', 'star', 'car', 'flower', 'boat',
-  'apple', 'snowman', 'butterfly', 'rainbow', 'rocket', 'ice cream', 'balloon',
-  'robot', 'frog', 'hat', 'banana', 'moon', 'duck', 'cookie', 'crown',
+  // animals
+  'cat', 'dog', 'fish', 'frog', 'duck', 'bird', 'bee', 'snail', 'snake', 'owl',
+  'pig', 'cow', 'horse', 'sheep', 'rabbit', 'mouse', 'lion', 'tiger', 'bear', 'monkey',
+  'elephant', 'giraffe', 'zebra', 'penguin', 'turtle', 'octopus', 'crab', 'whale', 'shark', 'dolphin',
+  'dinosaur', 'dragon', 'unicorn', 'spider', 'butterfly', 'ladybug', 'caterpillar', 'fox', 'koala', 'kangaroo',
+  // nature & sky
+  'sun', 'moon', 'star', 'cloud', 'rainbow', 'tree', 'flower', 'leaf', 'mountain', 'volcano',
+  'island', 'wave', 'snowflake', 'lightning', 'campfire', 'cactus', 'mushroom', 'pumpkin',
+  // food
+  'apple', 'banana', 'orange', 'grapes', 'strawberry', 'watermelon', 'carrot', 'corn', 'pizza', 'burger',
+  'hot dog', 'taco', 'cookie', 'cake', 'cupcake', 'donut', 'ice cream', 'lollipop', 'candy', 'egg',
+  'cheese', 'bread', 'pancakes', 'popcorn',
+  // things & vehicles
+  'house', 'castle', 'tent', 'car', 'truck', 'bus', 'train', 'boat', 'rocket', 'airplane',
+  'bicycle', 'kite', 'balloon', 'umbrella', 'clock', 'key', 'book', 'pencil', 'scissors', 'cup',
+  'hat', 'crown', 'glasses', 'shoe', 'sock', 'shirt', 'bell', 'drum', 'guitar', 'ball',
+  // characters & fun
+  'robot', 'snowman', 'ghost', 'witch', 'pirate', 'clown', 'king', 'queen', 'mermaid', 'superhero',
+  'alien', 'wizard', 'angel', 'monster',
+  // body & misc
+  'eye', 'hand', 'foot', 'smile', 'heart', 'present', 'treasure', 'map', 'flag', 'bridge',
 ];
 
 function shuffle(arr) {
