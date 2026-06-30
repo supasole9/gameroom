@@ -5,8 +5,9 @@ import draw from './draw.js';
 import mathtug from './mathtug.js';
 import laie from './laie.js';
 import brawl from './brawl.js';
+import jeopardy from './jeopardy/index.js';
 
-const games = [snakes, story, draw, mathtug, laie, brawl];
+const games = [snakes, story, draw, mathtug, laie, brawl, jeopardy];
 
 export const registry = new Map(games.map((g) => [g.id, g]));
 
