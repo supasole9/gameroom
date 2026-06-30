@@ -40,6 +40,21 @@ answers. First to buzz locks everyone else out.
   sound, and shows "{name} buzzed!".
 - Answer clock: **8 seconds** after buzz. Timeout is treated as a wrong answer.
 
+### Shared device — split buzz
+We support multiple player seats per device (pass-and-play). So two people can
+hold opposite ends of one phone and race to buzz:
+
+- During `reveal`, if a device holds **2+ seats**, the controller renders **one
+  BUZZ button per seat, stacked** (top half = seat A, bottom half = seat B,
+  tuned for 2; 3–4 seats degrade to a smaller stack). Each end taps its own
+  seat.
+- Whichever end is tapped first → that **seat** buzzes; the server attributes
+  the buzz to the correct player and the device flips to that seat's answer
+  choices (the existing one-interactive-seat auto-switch handles this).
+- A single-seat device shows one full-screen BUZZ button, as today.
+- This is the one place the controller's normal one-seat-at-a-time rendering is
+  overridden: during a buzz, all local seats render simultaneously.
+
 ### Scoring (classic lockout)
 - **Correct** → +tile value; buzzer becomes the next picker; advance.
 - **Wrong or timeout** → −tile value; that phone locked out for this tile; the
@@ -90,7 +105,7 @@ the game's buzz/score logic**.
 | `server/games/jeopardy/packs.js` | New — the category question banks. |
 | `server/games/index.js` | Register the new game. |
 | `public/js/tv.js` | Add `case 'jeopardy'` + `renderJeopardy(payload)`: setup screen, board grid, reveal text, buzz banner, answer reveal, winner screen. Small buzz sound. |
-| `public/js/controller.js` | **No new view types.** Reuses `button`, `choices`, `prompt`, `text`, and `flash: 'wrong'`. |
+| `public/js/controller.js` | **One new view type: `buzz`** (a big buzz button). Plus a tweak so that when multiple local seats are simultaneously showing a `buzz` view, they render stacked at once (split buzz) instead of one-at-a-time. Answering reuses `choices`/`prompt`/`text`/`flash: 'wrong'`. |
 
 `minPlayers: 1, maxPlayers: 8`.
 
@@ -113,7 +128,8 @@ Pure helpers are unit-tested (no socket plumbing):
 - **Board build** — N categories → grid with 5 tiles each at the right values;
   questions shuffled and not repeated within a column.
 - **Buzz resolution** — two near-simultaneous buzzes → only the first locks in;
-  a locked-out player's buzz is ignored on re-open.
+  a locked-out player's buzz is ignored on re-open. Buzzes from two seats on one
+  device attribute to the correct seat.
 - **Score math** — correct adds value, wrong subtracts value, picker reassigned
   on correct only, scores may go negative.
 - **Board-empty detection** → transition to `over`, winner = max score.
@@ -128,3 +144,5 @@ Manual living-room pass for pacing/feel (reveal speed, answer clock length).
 - Content: built-in JSON packs; each movie is its own category.
 - Answer clock: 8s. Point value = reward, not difficulty.
 - Name That Tune deferred to phase 2; audio slot designed into the data model.
+- Shared device: split buzz, one button per seat (tuned for 2), so two people
+  can race on one phone.
