@@ -14,6 +14,7 @@ Built so you can keep adding games to the arcade. Three are included:
 | **Math Tug of War** | 🪢 | 2-player duel: answer math questions fast to pull the rope your way. Each player picks their own difficulty, so mixed ages compete fairly. |
 | **Lāʻie & Kahuku** | 🏝️ | Monopoly-lite around the real North Shore towns — buy shrimp trucks, beaches and farms, pay rent, draw Hukilau cards. Richest player wins (nobody gets eliminated early). |
 | **Roll the Brawl** | 🗡️ | 2-player duel! Roll for a weapon (or recharge a heart), play a mini-game to aim, and the defender gets a split-second to dodge or kick dynamite back. 3 hearts (half-heart hits); loser goes in the trash bin. |
+| **Buzz Room (Jeopardy)** | 🧠 | Pick categories on the TV. Questions type out on screen — race to **BUZZ** on your phone, then answer multiple choice. Two people can share a phone and buzz from opposite ends. |
 
 ## Run it
 
@@ -64,5 +65,7 @@ Everyone must be on the **same Wi-Fi**. Then pick a game on the TV and play!
 1. Create `server/games/mygame.js` exporting `{ id, name, emoji, blurb, minPlayers, maxPlayers, init(ctx), onAction(ctx, player, action) }`.
 2. Register it in `server/games/index.js`.
 3. (Optional) Add a `renderMygame(payload)` branch in `public/js/tv.js` for custom TV visuals — or reuse the existing patterns.
+4. (Optional) Export `onHostAction(ctx, action)` if the TV needs to drive the
+   game (e.g. a setup screen). The TV emits `socket.emit('host:gameAction', { control, value })`.
 
 The controller UI usually needs no changes thanks to the declarative view protocol.

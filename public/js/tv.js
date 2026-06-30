@@ -96,6 +96,7 @@ socket.on('tv:game', (payload) => {
     case 'mathtug': renderMathTug(payload); break;
     case 'laie': renderLaie(payload); break;
     case 'brawl': renderBrawl(payload); break;
+    case 'jeopardy': renderJeopardy(payload); break;
   }
 });
 
@@ -113,6 +114,7 @@ function renderScorebar(players, payload) {
 
 function activeTurnId(payload) {
   const s = payload.state || {};
+  if (s.pickerId) return s.pickerId;
   if (s.order && typeof s.turnIndex === 'number') return s.order[s.turnIndex % s.order.length];
   if (s.drawerId) return s.drawerId;
   return null;
@@ -531,4 +533,144 @@ function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
   ));
+}
+
+// ---------- Jeopardy "Buzz Room" ----------
+let jeoTyper = null;            // interval handle for the type-out animation
+let jeoSetupSel = [];           // TV-local category selection during setup
+
+function playBuzz() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ac = new Ctx();
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 440;
+    gain.gain.value = 0.08;
+    osc.connect(gain).connect(ac.destination);
+    osc.start();
+    osc.frequency.setValueAtTime(660, ac.currentTime + 0.08);
+    osc.stop(ac.currentTime + 0.18);
+    osc.onended = () => ac.close();
+  } catch { /* audio not available */ }
+}
+
+function escapeHtmlSafe(s) { return escapeHtml(String(s == null ? '' : s)); }
+
+function renderJeopardy(payload) {
+  const s = payload.state || {};
+  if (jeoTyper) { clearInterval(jeoTyper); jeoTyper = null; }
+
+  if (s.phase === 'setup') return renderJeoSetup(s);
+  if (s.phase === 'over') return renderJeoOver(payload, s);
+
+  // Board grid is the backdrop for board/reveal/answer/resolved.
+  const cols = (s.board && s.board.columns) || [];
+  const grid = cols.map((col) => {
+    const tiles = col.tiles.map((t) => {
+      const cur = s.current && s.current.colId === col.id && s.current.value === t.value && s.phase !== 'board';
+      const cls = 'jeo-tile' + (t.done ? ' done' : '') + (cur ? ' current' : '');
+      return `<div class="${cls}">${t.done ? '' : t.value}</div>`;
+    }).join('');
+    return `<div class="jeo-col"><div class="jeo-head">${col.emoji}<br>${escapeHtmlSafe(col.name)}</div>${tiles}</div>`;
+  }).join('');
+
+  let panel = '';
+  if (s.phase === 'board') {
+    const picker = (payload.players || []).find((p) => p.id === s.pickerId);
+    panel = `<div class="jeo-panel"><div class="jeo-pick">${picker ? escapeHtmlSafe(picker.name) : 'Someone'}, pick a tile on your phone!</div></div>`;
+  } else if (s.current) {
+    const choices = s.current.choices.map((c, i) =>
+      `<div class="jeo-choice" data-i="${i}">${'ABCD'[i]}. ${escapeHtmlSafe(c)}</div>`).join('');
+    let banner = 'Everyone: BUZZ on your phone when you know it!';
+    if (s.phase === 'answer') {
+      const who = (payload.players || []).find((p) => p.id === s.buzzedBy);
+      banner = `🔔 ${who ? escapeHtmlSafe(who.name) : 'Someone'} buzzed — answering…`;
+    } else if (s.phase === 'resolved') {
+      const r = s.lastResult || {};
+      const who = (payload.players || []).find((p) => p.id === r.pid);
+      banner = r.correct ? `✅ ${escapeHtmlSafe(who && who.name || '')} got it! +${r.value}`
+        : `❌ The answer was ${'ABCD'[r.answer]}.`;
+    }
+    panel = `<div class="jeo-panel">
+      <div class="jeo-q" id="jeoQ"></div>
+      <div class="jeo-choices">${choices}</div>
+      <div class="jeo-banner">${banner}</div>
+    </div>`;
+  }
+
+  gameStage.innerHTML = `<div class="jeo-wrap"><div class="jeo-board">${grid}</div>${panel}</div>`;
+
+  // Reveal: type the question out word-by-word over revealMs.
+  if (s.current && (s.phase === 'reveal' || s.phase === 'answer' || s.phase === 'resolved')) {
+    const qEl = $('jeoQ');
+    const words = s.current.q.split(/\s+/);
+    if (s.phase === 'reveal' && s.revealMs > 0 && payload.startReveal) {
+      let i = 0;
+      const step = Math.max(60, Math.floor(s.revealMs / words.length));
+      qEl.textContent = '';
+      jeoTyper = setInterval(() => {
+        i++;
+        qEl.textContent = words.slice(0, i).join(' ');
+        if (i >= words.length) { clearInterval(jeoTyper); jeoTyper = null; }
+      }, step);
+    } else {
+      // reopened, answering, resolved, or a reconnect mid-question: show full text.
+      qEl.textContent = s.current.q;
+    }
+  }
+
+  // Highlight the chosen answer once resolved.
+  if (s.phase === 'resolved' && s.current) {
+    const right = gameStage.querySelector(`.jeo-choice[data-i="${s.current.answer}"]`);
+    if (right) right.classList.add('right');
+  }
+
+  if (payload.buzz) playBuzz();
+}
+
+function renderJeoSetup(s) {
+  const cats = s.catalogue || [];
+  const cards = cats.map((c) => {
+    const on = jeoSetupSel.includes(c.id);
+    return `<div class="jeo-cat${on ? ' sel' : ''}" data-id="${c.id}">${c.emoji}<div>${escapeHtmlSafe(c.name)}</div></div>`;
+  }).join('');
+  const canStart = jeoSetupSel.length >= 2 && jeoSetupSel.length <= 4;
+  gameStage.innerHTML = `
+    <div class="jeo-setup">
+      <h2>Pick 2–4 categories</h2>
+      <div class="jeo-cats">${cards}</div>
+      <button id="jeoStart" class="jeo-start" ${canStart ? '' : 'disabled'}>Start (${jeoSetupSel.length})</button>
+    </div>`;
+  gameStage.querySelectorAll('.jeo-cat').forEach((el) => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.id;
+      const i = jeoSetupSel.indexOf(id);
+      if (i >= 0) jeoSetupSel.splice(i, 1);
+      else if (jeoSetupSel.length < 4) jeoSetupSel.push(id);
+      renderJeoSetup(s); // re-render with new selection
+    });
+  });
+  const startBtn = $('jeoStart');
+  if (startBtn) startBtn.addEventListener('click', () => {
+    if (jeoSetupSel.length >= 2 && jeoSetupSel.length <= 4) {
+      socket.emit('host:gameAction', { control: 'categories', value: jeoSetupSel.slice() });
+    }
+  });
+}
+
+function renderJeoOver(payload, s) {
+  jeoSetupSel = []; // reset for a possible next game
+  const winner = (payload.players || []).find((p) => p.id === s.winner);
+  const ranked = [...(payload.players || [])].sort((a, b) => b.score - a.score);
+  const rows = ranked.map((p) =>
+    `<div class="jeo-rank"><span class="av">${avatarHTML(p.avatar)}</span> ${escapeHtmlSafe(p.name)} — ${p.score}</div>`).join('');
+  gameStage.innerHTML = `
+    <div class="jeo-over">
+      <h1>🏆 ${winner ? escapeHtmlSafe(winner.name) : 'Nobody'} wins!</h1>
+      <div class="jeo-ranks">${rows}</div>
+      <div class="jeo-banner">Tap "Play Again" on a phone for a rematch.</div>
+    </div>`;
 }

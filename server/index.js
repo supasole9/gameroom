@@ -170,6 +170,16 @@ io.on('connection', (socket) => {
     controllerLobbyAll(room);
   });
 
+  // The TV drives a running game (e.g. Jeopardy category setup, host controls).
+  socket.on('host:gameAction', (action) => {
+    const room = findRoomBySocket(socket.id);
+    if (!room || room.hostSocketId !== socket.id) return;
+    if (room.phase !== 'game' || !room.game) return;
+    if (typeof room.game.onHostAction !== 'function') return;
+    const ctx = createContext(io, room);
+    room.game.onHostAction(ctx, action || {});
+  });
+
   // Host removes a player seat (e.g. a stale slot left behind).
   socket.on('host:removePlayer', ({ clientId, pid }) => {
     const room = findRoomBySocket(socket.id);
