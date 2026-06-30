@@ -516,3 +516,29 @@ canvas#tvDraw { display: block; border-radius: 18px; }
 .buzz-btn.split:first-child { transform: rotate(180deg); } /* faces the player across the phone */
 .split-name { font-size: 1rem; opacity: 0.9; }
 .split-label { font-size: 2rem; }
+
+/* ---- Jeopardy "Buzz Room" (TV) ---- */
+.jeo-wrap { display: flex; flex-direction: column; gap: 18px; height: 100%; }
+.jeo-board { display: flex; gap: 10px; justify-content: center; }
+.jeo-col { display: flex; flex-direction: column; gap: 8px; flex: 1; max-width: 220px; }
+.jeo-head { background: #1d1170; color: #ffd84d; font-weight: 800; text-align: center; padding: 10px; border-radius: 10px; min-height: 64px; }
+.jeo-tile { background: #2a1b8a; color: #ffd84d; font-size: 2rem; font-weight: 800; text-align: center; padding: 18px 0; border-radius: 10px; }
+.jeo-tile.done { background: #160d4a; color: transparent; }
+.jeo-tile.current { outline: 4px solid #ffd84d; }
+.jeo-panel { background: #1a1033; border-radius: 16px; padding: 24px; text-align: center; flex: 1; display: flex; flex-direction: column; gap: 16px; justify-content: center; }
+.jeo-q { font-size: 2.4rem; font-weight: 700; color: #fff; min-height: 3rem; }
+.jeo-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 900px; margin: 0 auto; width: 100%; }
+.jeo-choice { background: #2a1b8a; color: #fff; padding: 14px 18px; border-radius: 12px; font-size: 1.4rem; text-align: left; }
+.jeo-choice.right { background: #16a34a; font-weight: 800; }
+.jeo-banner { font-size: 1.4rem; color: #ffd84d; }
+.jeo-pick { font-size: 2rem; color: #ffd84d; font-weight: 700; }
+.jeo-setup { text-align: center; color: #fff; }
+.jeo-cats { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 18px 0; }
+.jeo-cat { background: #2a1b8a; border-radius: 12px; padding: 16px; min-width: 120px; font-size: 2rem; cursor: pointer; }
+.jeo-cat div { font-size: 1rem; margin-top: 6px; }
+.jeo-cat.sel { outline: 4px solid #ffd84d; background: #3a2bb0; }
+.jeo-start { font-size: 1.4rem; font-weight: 800; padding: 14px 28px; border-radius: 12px; border: none; background: #22c55e; color: #04210f; cursor: pointer; }
+.jeo-start:disabled { opacity: 0.4; cursor: default; }
+.jeo-over { text-align: center; color: #fff; }
+.jeo-ranks { margin: 20px auto; max-width: 420px; }
+.jeo-rank { background: #1a1033; border-radius: 10px; padding: 10px 16px; margin: 6px 0; font-size: 1.3rem; }
