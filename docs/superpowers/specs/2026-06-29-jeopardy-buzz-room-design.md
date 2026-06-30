@@ -38,7 +38,7 @@ answers. First to buzz locks everyone else out.
 - First buzz wins. The server records buzz order; the first received locks the
   question and ignores later buzzes. The TV freezes the text, plays a buzz
   sound, and shows "{name} buzzed!".
-- Answer clock: **8 seconds** after buzz. Timeout is treated as a wrong answer.
+- Answer clock: **10 seconds** after buzz. Timeout is treated as a wrong answer.
 
 ### Shared device — split buzz
 We support multiple player seats per device (pass-and-play). So two people can
@@ -61,7 +61,7 @@ hold opposite ends of one phone and race to buzz:
   question re-opens (text already fully shown) for remaining players to buzz.
 - **Everyone misses / nobody buzzes** within the reveal-plus-grace window → the
   TV reveals the correct answer, no score changes, same picker continues.
-- Scores may go negative (lockout penalty). That is allowed.
+- Scores **floor at 0** — a wrong answer never pushes a player below zero.
 
 ## Data — built-in packs
 
@@ -130,8 +130,8 @@ Pure helpers are unit-tested (no socket plumbing):
 - **Buzz resolution** — two near-simultaneous buzzes → only the first locks in;
   a locked-out player's buzz is ignored on re-open. Buzzes from two seats on one
   device attribute to the correct seat.
-- **Score math** — correct adds value, wrong subtracts value, picker reassigned
-  on correct only, scores may go negative.
+- **Score math** — correct adds value, wrong subtracts value but never below 0,
+  picker reassigned on correct only.
 - **Board-empty detection** → transition to `over`, winner = max score.
 
 Manual living-room pass for pacing/feel (reveal speed, answer clock length).
@@ -142,7 +142,7 @@ Manual living-room pass for pacing/feel (reveal speed, answer clock length).
 - Buzz: classic lockout, wrong = −value + re-open.
 - Structure: Jeopardy board, picker = last correct answerer.
 - Content: built-in JSON packs; each movie is its own category.
-- Answer clock: 8s. Point value = reward, not difficulty.
+- Answer clock: 10s. Point value = reward, not difficulty. Scores floor at 0.
 - Name That Tune deferred to phase 2; audio slot designed into the data model.
 - Shared device: split buzz, one button per seat (tuned for 2), so two people
   can race on one phone.
