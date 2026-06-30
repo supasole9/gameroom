@@ -7,9 +7,9 @@ import {
 } from './logic.js';
 import { categoryList, getCategory } from './packs.js';
 
-const ANSWER_MS = 10000;   // answer clock after a buzz
-const RESOLVED_MS = 3000;  // pause showing the result before the next pick
-const REOPEN_GRACE_MS = 800;
+const ANSWER_MS = 10000;     // answer clock after a buzz
+const RESOLVED_MS = 3000;    // pause showing the result before the next pick
+const BUZZ_WINDOW_MS = 10000; // time to buzz AFTER the question finishes revealing
 
 // Real timers, keyed by room code so a game's pending transition can be cancelled.
 const timers = new Map();
@@ -22,6 +22,14 @@ function setTimer(code, ms, fn) {
 function clearTimer(code) {
   const t = timers.get(code);
   if (t) { clearTimeout(t); timers.delete(code); }
+}
+
+const LETTERS = ['A', 'B', 'C', 'D'];
+
+// What the narrator reads aloud: the question, then the four choices.
+function narrationFor(tile) {
+  const opts = tile.choices.map((c, i) => `${LETTERS[i]}: ${c}`).join('. ');
+  return `${tile.q}. Is it: ${opts}?`;
 }
 
 function nameOf(ctx, pid) {
@@ -104,11 +112,13 @@ function startReveal(ctx, colId, value) {
   s.buzzedBy = null;
   s.lockedOut = [];
   s.phase = 'reveal';
-  s.revealMs = revealMsFor(tile.q);
+  const speech = narrationFor(tile);
+  s.revealMs = revealMsFor(speech); // approximate read-aloud duration
   pushAll(ctx, { startReveal: true });
-  ctx.narrate(tile.q);
-  // If nobody buzzes by the time the text finishes + grace, reveal the answer.
-  setTimer(ctx.room.code, s.revealMs + REOPEN_GRACE_MS, () => {
+  ctx.narrate(speech);
+  // After the text finishes typing, players get a full buzz window before the
+  // answer is revealed.
+  setTimer(ctx.room.code, s.revealMs + BUZZ_WINDOW_MS, () => {
     if (ctx.state && ctx.state.phase === 'reveal' && ctx.state.buzzedBy == null) {
       resolveNoBuzz(ctx);
     }
@@ -123,7 +133,7 @@ function reopenReveal(ctx) {
   // If everyone is locked out, just reveal the answer.
   if (eligibleToBuzz(ctx).length === 0) return resolveNoBuzz(ctx);
   pushAll(ctx, { reopen: true });
-  setTimer(ctx.room.code, 6000, () => {
+  setTimer(ctx.room.code, BUZZ_WINDOW_MS, () => {
     if (ctx.state && ctx.state.phase === 'reveal' && ctx.state.buzzedBy == null) resolveNoBuzz(ctx);
   });
 }

@@ -85,9 +85,11 @@ function renderGamesGrid() {
 $('backBtn').addEventListener('click', () => socket.emit('host:arcade'));
 
 // ---------- Game routing ----------
+let currentGameId = null;
 socket.on('tv:game', (payload) => {
   lobbyEl.classList.add('hide');
   gameViewEl.classList.remove('hide');
+  currentGameId = payload.gameId;
   renderScorebar(payload.players, payload);
   switch (payload.gameId) {
     case 'snakes': renderSnakes(payload); break;
@@ -176,32 +178,21 @@ function renderStory(payload) {
     return;
   }
 
-  // Walk parts, weaving in filled / pending blanks.
-  let html = '';
-  let bi = 0;
+  // The story stays a SECRET during play — show only what we're asking for now,
+  // so the finished mad-lib is a big reveal at the end.
+  const filled = s.blanks.filter((b) => b.value != null).length;
+  const total = s.blanks.length;
   const nextBlank = s.blanks.findIndex((b) => b.value == null);
-  for (let i = 0; i < s.parts.length; i++) {
-    if (s.parts[i] === null) {
-      const b = s.blanks[bi];
-      if (b.value != null) {
-        html += `<span class="blank-filled">${escapeHtml(b.value)}</span>`;
-      } else if (bi === nextBlank) {
-        html += `<span class="blank-current">${escapeHtml(b.prompt)}?</span>`;
-      } else {
-        html += `<span class="blank-pending">____</span>`;
-      }
-      bi++;
-    } else {
-      html += escapeHtml(s.parts[i]);
-    }
-  }
+  const prompt = nextBlank >= 0 ? s.blanks[nextBlank].prompt : '';
 
   const turnId = s.order[s.turnIndex % s.order.length];
   const turnP = (payload.players || []).find((p) => p.id === turnId);
   gameStage.innerHTML = `
     <div class="story-stage">
       <div class="story-title">📖 ${escapeHtml(s.title)}</div>
-      <div class="story-text">${html}</div>
+      <div class="story-ask-label">Give me…</div>
+      <div class="story-ask">${escapeHtml(prompt)}</div>
+      <div class="story-progress">Word ${Math.min(filled + 1, total)} of ${total} · 🙈 the story is a secret until the end!</div>
       <div class="story-turn">${turnP ? `${avatarHTML(turnP.avatar)} ${escapeHtml(turnP.name)}, check your phone!` : ''}</div>
     </div>`;
 }
@@ -499,6 +490,7 @@ function primeSpeech() {
 }
 socket.on('tv:narrate', ({ text }) => {
   if (!window.speechSynthesis || !text) return;
+  if (jeoMuted && currentGameId === 'jeopardy') return; // Buzz Room narrator muted — a human reads instead
   const u = new SpeechSynthesisUtterance(text);
   u.rate = 0.98;
   u.pitch = 1.1;
@@ -536,8 +528,16 @@ function escapeHtml(s) {
 }
 
 // ---------- Jeopardy "Buzz Room" ----------
-let jeoTyper = null;            // interval handle for the type-out animation
 let jeoSetupSel = [];           // TV-local category selection during setup
+let jeoLastPayload = null;      // last jeopardy payload, for re-rendering on mute toggle
+let jeoMuted = localStorage.getItem('jeoMuted') === '1'; // narrator off -> show text, read it yourself
+
+function jeoToggleMute() {
+  jeoMuted = !jeoMuted;
+  localStorage.setItem('jeoMuted', jeoMuted ? '1' : '0');
+  if (jeoMuted && window.speechSynthesis) window.speechSynthesis.cancel();
+  if (jeoLastPayload) renderJeopardy(jeoLastPayload); // reflect the new mode now
+}
 
 function playBuzz() {
   try {
@@ -560,73 +560,73 @@ function playBuzz() {
 function escapeHtmlSafe(s) { return escapeHtml(String(s == null ? '' : s)); }
 
 function renderJeopardy(payload) {
+  jeoLastPayload = payload;
   const s = payload.state || {};
-  if (jeoTyper) { clearInterval(jeoTyper); jeoTyper = null; }
 
   if (s.phase === 'setup') return renderJeoSetup(s);
   if (s.phase === 'over') return renderJeoOver(payload, s);
 
-  // Board grid is the backdrop for board/reveal/answer/resolved.
-  const cols = (s.board && s.board.columns) || [];
-  const grid = cols.map((col) => {
-    const tiles = col.tiles.map((t) => {
-      const cur = s.current && s.current.colId === col.id && s.current.value === t.value && s.phase !== 'board';
-      const cls = 'jeo-tile' + (t.done ? ' done' : '') + (cur ? ' current' : '');
-      return `<div class="${cls}">${t.done ? '' : t.value}</div>`;
-    }).join('');
-    return `<div class="jeo-col"><div class="jeo-head">${col.emoji}<br>${escapeHtmlSafe(col.name)}</div>${tiles}</div>`;
-  }).join('');
-
-  let panel = '';
+  // Board phase: show the category grid. Question phases take over the screen.
   if (s.phase === 'board') {
+    const cols = (s.board && s.board.columns) || [];
+    const grid = cols.map((col) => {
+      const tiles = col.tiles.map((t) => {
+        const cls = 'jeo-tile' + (t.done ? ' done' : '');
+        return `<div class="${cls}">${t.done ? '' : t.value}</div>`;
+      }).join('');
+      return `<div class="jeo-col"><div class="jeo-head">${col.emoji}<br>${escapeHtmlSafe(col.name)}</div>${tiles}</div>`;
+    }).join('');
     const picker = (payload.players || []).find((p) => p.id === s.pickerId);
-    panel = `<div class="jeo-panel"><div class="jeo-pick">${picker ? escapeHtmlSafe(picker.name) : 'Someone'}, pick a tile on your phone!</div></div>`;
-  } else if (s.current) {
-    const choices = s.current.choices.map((c, i) =>
-      `<div class="jeo-choice" data-i="${i}">${'ABCD'[i]}. ${escapeHtmlSafe(c)}</div>`).join('');
-    let banner = 'Everyone: BUZZ on your phone when you know it!';
-    if (s.phase === 'answer') {
-      const who = (payload.players || []).find((p) => p.id === s.buzzedBy);
-      banner = `🔔 ${who ? escapeHtmlSafe(who.name) : 'Someone'} buzzed — answering…`;
-    } else if (s.phase === 'resolved') {
-      const r = s.lastResult || {};
-      const who = (payload.players || []).find((p) => p.id === r.pid);
-      banner = r.correct ? `✅ ${escapeHtmlSafe(who && who.name || '')} got it! +${r.value}`
-        : `❌ The answer was ${'ABCD'[r.answer]}.`;
-    }
-    panel = `<div class="jeo-panel">
-      <div class="jeo-q" id="jeoQ"></div>
-      <div class="jeo-choices">${choices}</div>
-      <div class="jeo-banner">${banner}</div>
+    gameStage.innerHTML = `<div class="jeo-wrap">
+      <div class="jeo-board">${grid}</div>
+      <div class="jeo-pickbar">${picker ? escapeHtmlSafe(picker.name) : 'Someone'}, pick a tile on your phone!</div>
     </div>`;
+    return;
   }
 
-  gameStage.innerHTML = `<div class="jeo-wrap"><div class="jeo-board">${grid}</div>${panel}</div>`;
+  if (!s.current) return; // nothing to show
 
-  // Reveal: type the question out word-by-word over revealMs.
-  if (s.current && (s.phase === 'reveal' || s.phase === 'answer' || s.phase === 'resolved')) {
-    const qEl = $('jeoQ');
-    const words = s.current.q.split(/\s+/);
-    if (s.phase === 'reveal' && s.revealMs > 0 && payload.startReveal) {
-      let i = 0;
-      const step = Math.max(60, Math.floor(s.revealMs / words.length));
-      qEl.textContent = '';
-      jeoTyper = setInterval(() => {
-        i++;
-        qEl.textContent = words.slice(0, i).join(' ');
-        if (i >= words.length) { clearInterval(jeoTyper); jeoTyper = null; }
-      }, step);
-    } else {
-      // reopened, answering, resolved, or a reconnect mid-question: show full text.
-      qEl.textContent = s.current.q;
-    }
+  // A question takes over the whole screen (reveal / answer / resolved).
+  // Narrator on  -> hide the text, the TV voice reads it aloud.
+  // Muted        -> show the text so a human narrator reads it.
+  // Resolved     -> always show the text + correct answer so everyone sees it.
+  const cat = (s.board && s.board.columns.find((c) => c.id === s.current.colId)) || {};
+  const showText = jeoMuted || s.phase === 'resolved';
+
+  let banner = '🔔 Listen — the narrator is reading the question!';
+  if (jeoMuted && (s.phase === 'reveal' || s.phase === 'answer')) {
+    banner = 'Question read aloud — BUZZ on your phone when you know it!';
+  }
+  if (s.phase === 'answer') {
+    const who = (payload.players || []).find((p) => p.id === s.buzzedBy);
+    banner = `🔔 ${who ? escapeHtmlSafe(who.name) : 'Someone'} buzzed — answering…`;
+  } else if (s.phase === 'resolved') {
+    const r = s.lastResult || {};
+    const who = (payload.players || []).find((p) => p.id === r.pid);
+    banner = r.correct ? `✅ ${escapeHtmlSafe(who && who.name || '')} got it! +${r.value}`
+      : `❌ The answer was ${'ABCD'[r.answer]}.`;
   }
 
-  // Highlight the chosen answer once resolved.
-  if (s.phase === 'resolved' && s.current) {
-    const right = gameStage.querySelector(`.jeo-choice[data-i="${s.current.answer}"]`);
-    if (right) right.classList.add('right');
+  let body;
+  if (showText) {
+    const choices = s.current.choices.map((c, i) => {
+      const right = s.phase === 'resolved' && i === s.current.answer ? ' right' : '';
+      return `<div class="jeo-choice${right}">${'ABCD'[i]}. ${escapeHtmlSafe(c)}</div>`;
+    }).join('');
+    body = `<div class="jeo-q">${escapeHtmlSafe(s.current.q)}</div><div class="jeo-choices">${choices}</div>`;
+  } else {
+    body = '<div class="jeo-listen">🔊</div><div class="jeo-q">Listen!</div>';
   }
+
+  const muteLabel = jeoMuted ? '🔇 Muted — tap for narrator' : '🔊 Narrator on — tap to mute';
+  gameStage.innerHTML = `<div class="jeo-wrap question">
+    <button id="jeoMute" class="jeo-mute">${muteLabel}</button>
+    <div class="jeo-qcat">${cat.emoji || ''} ${escapeHtmlSafe(cat.name || '')} — ${s.current.value}</div>
+    ${body}
+    <div class="jeo-banner">${banner}</div>
+  </div>`;
+  const mb = $('jeoMute');
+  if (mb) mb.addEventListener('click', jeoToggleMute);
 
   if (payload.buzz) playBuzz();
 }
