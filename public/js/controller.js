@@ -222,11 +222,23 @@ socket.on('controller:view', ({ seat, view }) => {
   renderAll();
 });
 
+const isBuzzView = (view) => (view.controls || []).length > 0
+  && (view.controls || []).every((c) => c.type === 'buzz');
+
 function renderAll() {
   const entries = mySeats.map((s) => seatViews.get(s.pid)).filter(Boolean);
   if (!entries.length) return;
 
   const activeSet = new Set(entries.filter((e) => isInteractive(e.view)).map((e) => e.seat.pid));
+
+  // Split buzz: 2+ seats on this phone are all showing a buzz button at once.
+  const buzzEntries = entries.filter((e) => activeSet.has(e.seat.pid) && isBuzzView(e.view));
+  if (buzzEntries.length > 1 && buzzEntries.length === activeSet.size) {
+    currentScreen = 'game';
+    renderSeatBar(activeSet);
+    renderSplitBuzz(buzzEntries);
+    return;
+  }
 
   let pick;
   if (entries.length === 1) pick = entries[0];
@@ -239,6 +251,26 @@ function renderAll() {
   actingPid = pick.seat.pid;
   renderSeatBar(activeSet);
   renderView(pick.view, pick.seat);
+}
+
+// One big buzz button per local seat, stacked — two people can hold opposite
+// ends of the phone and race. Each button attributes the buzz to its own seat.
+function renderSplitBuzz(entries) {
+  $('ctrlTitle').textContent = 'Read the TV — BUZZ!';
+  $('ctrlSub').textContent = 'Each player taps their own side.';
+  runCleanups();
+  controlsEl.innerHTML = '';
+  padClear = null;
+  const wrap = document.createElement('div');
+  wrap.className = 'split-buzz';
+  for (const e of entries) {
+    const b = document.createElement('button');
+    b.className = 'btn buzz-btn split';
+    b.innerHTML = `<span class="split-name">${avatarMarkup(e.seat.avatar)} ${e.seat.name}</span><span class="split-label">🔴 BUZZ</span>`;
+    b.addEventListener('click', () => sendAs(e.seat.pid, 'buzz', true));
+    wrap.appendChild(b);
+  }
+  controlsEl.appendChild(wrap);
 }
 
 function renderSeatBar(activeSet) {
@@ -279,6 +311,10 @@ function renderView(view, seat) {
 
 function send(control, value) {
   socket.emit('player:action', { pid: actingPid, control, value });
+}
+
+function sendAs(pid, control, value) {
+  socket.emit('player:action', { pid, control, value });
 }
 
 function buildControl(c) {
@@ -354,6 +390,13 @@ function buildControl(c) {
     wrap.appendChild(inp);
     wrap.appendChild(btn);
     return wrap;
+  }
+  if (c.type === 'buzz') {
+    const b = document.createElement('button');
+    b.className = 'btn buzz-btn';
+    b.textContent = c.label || '🔴 BUZZ';
+    b.addEventListener('click', () => send(c.id, true));
+    return b;
   }
   if (c.type === 'draw') return buildDrawPad();
   if (c.type === 'timing') return buildTiming(c);
